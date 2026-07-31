@@ -75,6 +75,27 @@ export const en = {
     'This website is not in your Firebase authorized domains. Add it in Authentication → Settings → Authorized domains.',
   'auth.errGeneric': 'Could not sign in',
 
+  // account (email / password badalna)
+  'account.signedInAs': 'Signed in as',
+  'account.changeEmail': 'Change email',
+  'account.changePassword': 'Change password',
+  'account.currentPassword': 'Current password',
+  'account.newPassword': 'New password',
+  'account.confirmPassword': 'Confirm new password',
+  'account.newEmail': 'New email',
+  'account.currentEmailIs': 'Your email right now is {email}',
+  'account.sendVerification': 'Send verification link',
+  'account.emailChangeNote':
+    'We will send a link to the new address. Your email changes only after you open that link — until then keep using the old one to sign in.',
+  'account.verificationSent': 'Link sent to {email} — open it to finish',
+  'account.passwordChanged': 'Password changed',
+  'account.errAllFields': 'Please fill in all the fields',
+  'account.errPasswordMismatch': 'The two new passwords do not match',
+  'account.errSamePassword': 'New password is the same as the current one',
+  'account.errSameEmail': 'That is already your email',
+  'account.errWrongCurrentPassword': 'Current password is wrong',
+  'account.errEmailTaken': 'Another account already uses that email',
+
   // offline banner
   'net.offline': 'Offline — changes will sync when internet returns',
 

@@ -1261,6 +1261,17 @@ input[type='checkbox'] {
   text-align: start;
   cursor: pointer;
 }
+.list-row:active {
+  background: var(--bg);
+}
+/* Chevron ko size dena zaroori hai — SVG ki apni koi lambai chaurai nahi hoti,
+   size na ho to poori jagah ghair leta hai. */
+.list-row svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
 
 .divider {
   height: 1px;

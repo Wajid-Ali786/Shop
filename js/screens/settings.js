@@ -4,7 +4,8 @@ import { navigate } from '../lib/router.js'
 import { state, saveSetting, buildExport } from '../store.js'
 import { appBar, field, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
-import { auth, signOut } from '../firebase.js'
+import { currentEmail, signOut } from '../firebase.js'
+import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -76,9 +77,23 @@ export function renderSettings(root, rerender) {
         ${section(
           t('settings.account'),
           `<div class="card">
-             <p class="small muted" style="margin-bottom:12px" dir="ltr">
-               ${esc(t('auth.signedInAs', { email: auth?.currentUser?.email || '' }))}
-             </p>
+             <p class="tiny muted">${esc(t('account.signedInAs'))}</p>
+             <p class="bold" dir="ltr" style="margin-bottom:14px">${esc(currentEmail())}</p>
+
+             <button class="list-row" data-change-email style="margin-bottom:8px">
+               <span style="flex:1">
+                 <span class="bold">${esc(t('account.changeEmail'))}</span>
+               </span>
+               ${icon('chevron', 'flip')}
+             </button>
+
+             <button class="list-row" data-change-password style="margin-bottom:14px">
+               <span style="flex:1">
+                 <span class="bold">${esc(t('account.changePassword'))}</span>
+               </span>
+               ${icon('chevron', 'flip')}
+             </button>
+
              <button class="btn btn--secondary btn--full" data-signout>${esc(t('auth.signOut'))}</button>
            </div>`,
         )}
@@ -123,6 +138,10 @@ export function renderSettings(root, rerender) {
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     toast(t('settings.exported'))
   })
+
+  // ---- account ----
+  on(root, 'click', '[data-change-email]', () => openChangeEmailSheet())
+  on(root, 'click', '[data-change-password]', () => openChangePasswordSheet())
 
   // ---- sign out ----
   on(root, 'click', '[data-signout]', async () => {
