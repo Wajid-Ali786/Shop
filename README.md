@@ -35,6 +35,7 @@ Us ke bagair app sirf "Firebase setup needed" wali screen dikhayegi.
 - **English + اردو** — poora RTL layout
 - **Dark mode**
 - **Har phone se** — apne email/password se kisi bhi device par login karein
+- **Account controls** — Settings me se email aur password khud badal sakte hain
 
 ---
 

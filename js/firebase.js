@@ -10,6 +10,11 @@ import {
   createUserWithEmailAndPassword,
   signOut as fbSignOut,
   onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  verifyBeforeUpdateEmail,
+  sendPasswordResetEmail,
 } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-auth.js'
 import {
   initializeFirestore,
@@ -61,6 +66,46 @@ export async function signOut() {
 
 export function currentUid() {
   return auth?.currentUser?.uid ?? null
+}
+
+export function currentEmail() {
+  return auth?.currentUser?.email ?? ''
+}
+
+// -------------------------------------------------------- account settings
+
+/**
+ * Firebase email/password badalne se pehle "haal hi me login" maangta hai.
+ * Har tabdeeli se pehle maujooda password se dobara tasdeeq kar lete hain —
+ * is se `auth/requires-recent-login` wali pareshani aati hi nahi, aur koi
+ * doosra shakhs khuli hui app par aa kar password nahi badal sakta.
+ */
+async function reauthenticate(currentPassword) {
+  const user = auth?.currentUser
+  if (!user?.email) throw new Error('Sign in nahi kiya hua')
+  const credential = EmailAuthProvider.credential(user.email, currentPassword)
+  await reauthenticateWithCredential(user, credential)
+  return user
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  const user = await reauthenticate(currentPassword)
+  await updatePassword(user, newPassword)
+}
+
+/**
+ * Naya email FORAN nahi badalta: Firebase naye pate par tasdeeqi link bhejta
+ * hai, aur email tab badalta hai jab user us link par click kare. Purana email
+ * tab tak chalta rehta hai — is se ghalat pata daal kar account gum nahi hota.
+ */
+export async function changeEmail(currentPassword, newEmail) {
+  const user = await reauthenticate(currentPassword)
+  await verifyBeforeUpdateEmail(user, newEmail.trim())
+}
+
+/** Password bhool jane par — reset link email par jata hai. */
+export async function sendPasswordReset(email) {
+  await sendPasswordResetEmail(auth, email.trim())
 }
 
 /** Firebase ke error codes ko aam zabaan me badalta hai. */

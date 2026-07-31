@@ -47,6 +47,7 @@ const APP_FILES = [
   './js/lib/search.js',
   './js/lib/theme.js',
   './js/lib/units.js',
+  './js/screens/account.js',
   './js/screens/categories.js',
   './js/screens/dashboard.js',
   './js/screens/login.js',

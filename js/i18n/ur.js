@@ -75,6 +75,27 @@ export const ur = {
     'یہ ویب سائٹ آپ کے فائربیس authorized domains میں شامل نہیں۔ Authentication → Settings → Authorized domains میں شامل کریں۔',
   'auth.errGeneric': 'سائن ان نہیں ہو سکا',
 
+  // account (email / password badalna)
+  'account.signedInAs': 'سائن ان',
+  'account.changeEmail': 'ای میل تبدیل کریں',
+  'account.changePassword': 'پاس ورڈ تبدیل کریں',
+  'account.currentPassword': 'موجودہ پاس ورڈ',
+  'account.newPassword': 'نیا پاس ورڈ',
+  'account.confirmPassword': 'نیا پاس ورڈ دوبارہ لکھیں',
+  'account.newEmail': 'نیا ای میل',
+  'account.currentEmailIs': 'اس وقت آپ کا ای میل {email} ہے',
+  'account.sendVerification': 'تصدیقی لنک بھیجیں',
+  'account.emailChangeNote':
+    'ہم نئے پتے پر ایک لنک بھیجیں گے۔ ای میل تبھی بدلے گا جب آپ وہ لنک کھولیں گے — تب تک سائن اِن کے لیے پرانا ای میل ہی چلے گا۔',
+  'account.verificationSent': '{email} پر لنک بھیج دیا — مکمل کرنے کے لیے اسے کھولیں',
+  'account.passwordChanged': 'پاس ورڈ تبدیل ہو گیا',
+  'account.errAllFields': 'براہِ کرم تمام خانے پُر کریں',
+  'account.errPasswordMismatch': 'دونوں نئے پاس ورڈ ایک جیسے نہیں',
+  'account.errSamePassword': 'نیا پاس ورڈ موجودہ جیسا ہی ہے',
+  'account.errSameEmail': 'یہ تو پہلے ہی آپ کا ای میل ہے',
+  'account.errWrongCurrentPassword': 'موجودہ پاس ورڈ غلط ہے',
+  'account.errEmailTaken': 'یہ ای میل کسی اور اکاؤنٹ میں استعمال ہو رہا ہے',
+
   // offline banner
   'net.offline': 'آف لائن — انٹرنیٹ آنے پر تبدیلیاں خودکار سیو ہو جائیں گی',
 
