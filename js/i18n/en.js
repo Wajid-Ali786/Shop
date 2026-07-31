@@ -39,9 +39,20 @@ export const en = {
     'This app stores your data in your own Firebase project. Open js/config.js and paste your Firebase config there.',
   'setup.guide': 'Full instructions are in FIREBASE-SETUP.md',
 
+  // welcome (site khulne par pehli screen)
+  'welcome.title': 'Karyana Shop',
+  'welcome.tagline': 'Your shop’s products and stock, on your phone.',
+  'welcome.pointSearch': 'Find anything fast — Urdu, Roman or English',
+  'welcome.pointStock': 'Stock in kg, gram, packet or dozen',
+  'welcome.pointOffline': 'Works without internet, syncs later',
+  'welcome.login': 'Login',
+  'welcome.createAccount': 'Create new account',
+
   // auth
   'auth.title': 'Karyana Shop',
   'auth.subtitle': 'Sign in to your shop',
+  'auth.subtitleSignUp': 'Make an account for your shop',
+  'auth.passwordHint': 'At least 6 characters',
   'auth.email': 'Email',
   'auth.password': 'Password',
   'auth.signIn': 'Sign in',

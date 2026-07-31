@@ -1,24 +1,33 @@
 import { esc, $ } from '../lib/dom.js'
 import { t } from '../i18n/index.js'
 import { field } from '../components.js'
+import { navigate } from '../lib/router.js'
 import { signIn, signUp, authErrorKey } from '../firebase.js'
 
 /**
- * Login. Firebase ka web config public hota hai, isliye database ko sirf
- * Firestore rules + login hi mehfooz rakhte hain — bina login ke koi bhi
- * aap ka data parh sakta tha.
+ * Login / account banane ka form. Site khulne par ye seedha nazar nahi aata —
+ * welcome screen se button daba kar yahan aate hain.
+ *
+ * Login lagana zaroori hai: Firebase ka web config public hota hai, is liye
+ * database ko sirf Firestore rules + login hi mehfooz rakhte hain.
  */
-export function renderLogin(root) {
-  let mode = 'signin'
+export function renderLogin(root, initialMode = 'signin') {
+  let mode = initialMode
   let error = ''
   let busy = false
 
   function draw() {
+    const isSignUp = mode === 'signup'
+
     root.innerHTML = `
       <div class="auth">
+        <button class="auth__back" data-back>
+          <span class="flip">←</span> ${esc(t('common.back'))}
+        </button>
+
         <img class="auth__logo" src="assets/icon-192.png" alt="">
-        <h1 class="auth__title">${esc(t('auth.title'))}</h1>
-        <p class="auth__sub">${esc(t('auth.subtitle'))}</p>
+        <h1 class="auth__title">${esc(isSignUp ? t('auth.signUp') : t('auth.signIn'))}</h1>
+        <p class="auth__sub">${esc(isSignUp ? t('auth.subtitleSignUp') : t('auth.subtitle'))}</p>
 
         ${error ? `<div class="auth__error">${esc(error)}</div>` : ''}
 
@@ -31,21 +40,24 @@ export function renderLogin(root) {
           ${field(
             t('auth.password'),
             `<input id="auth-password" type="password" dir="ltr"
-               autocomplete="${mode === 'signin' ? 'current-password' : 'new-password'}" required>`,
+               autocomplete="${isSignUp ? 'new-password' : 'current-password'}" required>`,
+            { hint: isSignUp ? t('auth.passwordHint') : '' },
           )}
 
           <button type="submit" class="btn btn--primary btn--full" ${busy ? 'disabled' : ''}>
-            ${busy ? '<span class="spinner spinner--sm"></span>' : esc(mode === 'signin' ? t('auth.signIn') : t('auth.signUp'))}
+            ${busy ? '<span class="spinner spinner--sm"></span>' : esc(isSignUp ? t('auth.signUp') : t('auth.signIn'))}
           </button>
         </form>
 
         <button class="auth__switch" id="auth-switch">
-          ${esc(mode === 'signin' ? t('auth.toSignUp') : t('auth.toSignIn'))}
+          ${esc(isSignUp ? t('auth.toSignIn') : t('auth.toSignUp'))}
         </button>
       </div>`
 
+    $('[data-back]', root).addEventListener('click', () => navigate('/'))
+
     $('#auth-switch', root).addEventListener('click', () => {
-      mode = mode === 'signin' ? 'signup' : 'signin'
+      mode = isSignUp ? 'signin' : 'signup'
       error = ''
       draw()
     })
@@ -62,8 +74,8 @@ export function renderLogin(root) {
       draw()
 
       try {
-        if (mode === 'signin') await signIn(email, password)
-        else await signUp(email, password)
+        if (isSignUp) await signUp(email, password)
+        else await signIn(email, password)
         // Kamyabi par onAuthStateChanged khud app ko aage le jayega.
       } catch (err) {
         busy = false
