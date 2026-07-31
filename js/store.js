@@ -227,11 +227,39 @@ function categoryNamesFor(categoryIds) {
   return names.join(' ') || undefined
 }
 
+/**
+ * Do categories kab "ek jaisi" hain: chhote-baray harf aur aage peeche ki
+ * jagah ka farq nahi ginte. "Cold Drinks", "cold drinks" aur "COLD  DRINKS"
+ * teenon ek hi cheez hain — warna list me ek jaisi categories jamā ho kar
+ * products bikhar jate hain.
+ */
+function categoryKey(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+/** Isi naam ki category pehle se hai? (`exceptId` khud ko chhorne ke liye.) */
+export function findCategoryByName(name, exceptId) {
+  const key = categoryKey(name)
+  if (!key) return undefined
+  return state.categories.find((c) => c.id !== exceptId && categoryKey(c.nameEn) === key)
+}
+
+function duplicateError() {
+  const err = new Error('Ye category pehle se maujood hai')
+  err.code = 'duplicate-category'
+  return err
+}
+
 export async function createCategory(data) {
+  if (findCategoryByName(data.nameEn)) throw duplicateError()
+
   const sortOrder = (state.categories.length + 1) * 10
   const ref = await addDoc(col('categories'), {
-    nameEn: data.nameEn,
-    nameUr: data.nameUr ?? null,
+    nameEn: data.nameEn.trim(),
+    nameUr: data.nameUr?.trim() || null,
     icon: data.icon ?? '📦',
     sortOrder,
   })
@@ -240,6 +268,8 @@ export async function createCategory(data) {
 }
 
 export async function updateCategory(id, changes) {
+  if (changes.nameEn && findCategoryByName(changes.nameEn, id)) throw duplicateError()
+
   await updateDoc(doc(col('categories'), id), changes)
   // Category ka naam products ke searchBlob ka hissa hai.
   await rebuildSearchBlobs()

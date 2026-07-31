@@ -3,12 +3,25 @@ import { t, localizedName } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
 import { state, productById, categoryById, loadImage } from '../store.js'
 import { searchProducts } from '../lib/search.js'
-import { icon, empty, loading, productCard, fillImages } from '../components.js'
+import { icon, empty, loading, productCard, productGridCard, fillImages } from '../components.js'
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
-const ui = { query: '', categoryId: 'all', sort: 'name' }
+const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView() }
+
+/** List ya grid — dukandar ka chuna hua view yaad rehta hai. */
+function loadView() {
+  return localStorage.getItem('karyana.view') === 'grid' ? 'grid' : 'list'
+}
+function saveView(view) {
+  ui.view = view
+  try {
+    localStorage.setItem('karyana.view', view)
+  } catch {
+    // Private mode — sirf is session ke liye chalega.
+  }
+}
 
 export function renderProducts(root, rerender) {
   if (!state.ready) {
@@ -33,6 +46,17 @@ export function renderProducts(root, rerender) {
 
       <div class="row row--between pad" style="padding-top:4px;padding-bottom:4px">
         <span class="tiny muted">${esc(t('products.count', { count: visible.length }))}</span>
+        <div class="row" style="gap:8px">
+        <div class="viewtoggle">
+          <button data-view="list" aria-pressed="${ui.view === 'list'}"
+            aria-label="${escAttr(t('products.viewList'))}" title="${escAttr(t('products.viewList'))}">
+            ${icon('viewList')}
+          </button>
+          <button data-view="grid" aria-pressed="${ui.view === 'grid'}"
+            aria-label="${escAttr(t('products.viewGrid'))}" title="${escAttr(t('products.viewGrid'))}">
+            ${icon('viewGrid')}
+          </button>
+        </div>
         ${
           ui.query.trim()
             ? ''
@@ -43,6 +67,7 @@ export function renderProducts(root, rerender) {
                  <option value="newest"${ui.sort === 'newest' ? ' selected' : ''}>${esc(t('products.sortNewest'))}</option>
                </select>`
         }
+        </div>
       </div>
 
       ${listOrEmpty(visible)}
@@ -97,16 +122,18 @@ function categoryChips() {
 
 function listOrEmpty(visible) {
   if (visible.length) {
+    const grid = ui.view === 'grid'
+    const render = grid ? productGridCard : productCard
     const items = visible
       .map((p) => {
         const cat = categoryById((p.categoryIds || [])[0])
-        return `<li>${productCard(p, {
+        return `<li>${render(p, {
           categoryIcon: cat?.icon,
           currency: state.settings.currency,
         })}</li>`
       })
       .join('')
-    return `<ul class="plist pad" style="padding-top:0">${items}</ul>`
+    return `<ul class="${grid ? 'pgrid' : 'plist'} pad" style="padding-top:0">${items}</ul>`
   }
 
   if (state.products.length === 0) {
@@ -150,6 +177,11 @@ function wire(root, rerender) {
   on(root, 'click', '[data-cat]', (_e, el) => {
     const value = el.dataset.cat
     ui.categoryId = ui.categoryId === value ? 'all' : value
+    rerender()
+  })
+
+  on(root, 'click', '[data-view]', (_e, el) => {
+    saveView(el.dataset.view)
     rerender()
   })
 

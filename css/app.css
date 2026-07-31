@@ -597,6 +597,115 @@ input[type='checkbox'] {
   gap: 8px;
 }
 
+/* ------------------------------------------------------------ grid view */
+
+.pgrid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gcard {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.gcard__main {
+  display: block;
+  width: 100%;
+  padding: 10px 10px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  flex: 1;
+}
+.gcard__thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  background: var(--border);
+  font-size: 2.2rem;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.gcard__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gcard__name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  /* Do satr tak naam — grid me truncate karne se pehchan mushkil ho jati hai. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gcard__sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.gcard__price {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.gcard__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+.gcard__foot .quickstock__btn {
+  width: 34px;
+  height: 34px;
+  font-size: 1.2rem;
+}
+
+/* ---------------------------------------------------------- view toggle */
+
+.viewtoggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--border);
+}
+.viewtoggle button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.viewtoggle button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--brand);
+}
+.viewtoggle svg {
+  width: 17px;
+  height: 17px;
+}
+
 .pcard {
   display: flex;
   align-items: center;

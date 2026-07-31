@@ -22,6 +22,10 @@ export const ICONS = {
     '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" stroke-linecap="round" stroke-linejoin="round"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/>',
   plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
+  viewList:
+    '<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>',
+  viewGrid:
+    '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
 }
 
 export function icon(name, cls = '') {
@@ -175,6 +179,52 @@ export function quickStock(product) {
     </div>`
 }
 
+/**
+ * Grid view — do products fi qatar, tasveer bari.
+ *
+ * Jin dukandaron ko cheez tasveer se pehchanni ho un ke liye ye behtar hai;
+ * jinhe naam aur stock tezi se scan karna ho, un ke liye list view.
+ */
+export function productGridCard(product, { categoryIcon, currency }) {
+  const packSize = formatPackSize(product, unitLabel)
+  const out = (product.stockQty || 0) <= 0
+
+  return `
+    <div class="gcard">
+      <button class="gcard__main" data-open="${escAttr(product.id)}">
+        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}</div>
+        <p class="gcard__name" dir="auto">${esc(localizedName(product))}</p>
+        <p class="gcard__sub truncate">
+          ${packSize ? esc(t('form.packEach', { size: packSize })) : product.brand ? esc(product.brand) : '&nbsp;'}
+        </p>
+        <p class="gcard__price">
+          <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
+          <span class="faint tiny"> / ${esc(priceUnitLabel(product, unitLabel))}</span>
+        </p>
+      </button>
+
+      <div class="gcard__foot">
+        <button class="quickstock__value" data-adjust="${escAttr(product.id)}"
+          aria-label="${escAttr(t('detail.adjustStock'))}">${stockBadge(product)}</button>
+        <div class="quickstock__row">
+          <button class="quickstock__btn" data-minus="${escAttr(product.id)}"
+            ${out ? 'disabled' : ''} aria-label="${escAttr(t('stock.removeOne'))}">−</button>
+          <button class="quickstock__btn quickstock__btn--plus" data-plus="${escAttr(product.id)}"
+            aria-label="${escAttr(t('stock.addOne'))}">+</button>
+        </div>
+      </div>
+    </div>`
+}
+
+/** Thumb ka andar ka hissa — grid aur list dono istemaal karte hain. */
+function thumbInner(product, fallback) {
+  if (product.image) return `<img src="${escAttr(product.image)}" alt="" loading="lazy">`
+  if (product.imageId) {
+    return `<span data-image="${escAttr(product.imageId)}">${esc(fallback || '📦')}</span>`
+  }
+  return esc(fallback || '📦')
+}
+
 export function productThumbLarge(product, fallback) {
   return thumb(product, fallback, true)
 }
@@ -190,7 +240,12 @@ export function fillImages(root, loadImage) {
     const id = el.dataset.image
     el.removeAttribute('data-image')
     loadImage(id).then((data) => {
-      if (data && el.isConnected) el.innerHTML = `<img src="${escAttr(data)}" alt="">`
+      if (!data || !el.isConnected) return
+      // Grid me placeholder ek <span> hai jo thumb ke andar baitha hai —
+      // usay poora badalna hota hai, warna emoji tasveer ke saath reh jata.
+      const img = `<img src="${escAttr(data)}" alt="">`
+      if (el.tagName === 'SPAN') el.outerHTML = img
+      else el.innerHTML = img
     })
   }
 }

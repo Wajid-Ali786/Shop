@@ -130,6 +130,8 @@ export const en = {
   'products.sortPrice': 'Price',
   'products.sortNewest': 'Newest',
   'products.inactive': 'Hidden',
+  'products.viewList': 'List view',
+  'products.viewGrid': 'Grid view',
 
   // product form
   'form.addTitle': 'Add product',
@@ -238,6 +240,8 @@ export const en = {
   'categories.deleteConfirm':
     'Delete this category? Its products stay — they just become uncategorized.',
   'categories.restoreDefaults': 'Add default categories',
+  'categories.duplicate': 'A category called “{name}” already exists',
+  'categories.alreadyThere': '“{name}” already existed — ticked it for you',
 
   // settings
   'settings.title': 'Settings',

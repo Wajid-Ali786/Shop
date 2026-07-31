@@ -8,6 +8,7 @@ import {
   updateProduct,
   deleteProduct,
   createCategory,
+  findCategoryByName,
   saveImage,
   loadImage,
   deleteImage,
@@ -501,12 +502,23 @@ export function renderProductForm(root, productId) {
       const name = window.prompt(t('categories.nameEn'))
       if (!name || !name.trim()) return
       readInputs()
+
+      // Isi naam ki category pehle se ho to nayi banane ke bajaye wahi laga do —
+      // dukandar ki murad bhi yehi hoti hai.
+      const existing = findCategoryByName(name)
+      if (existing) {
+        if (!form.categoryIds.includes(existing.id)) form.categoryIds.push(existing.id)
+        toast(t('categories.alreadyThere', { name: existing.nameEn }))
+        draw()
+        return
+      }
+
       try {
         const id = await createCategory({ nameEn: name.trim(), icon: '📦' })
         if (id) form.categoryIds.push(id)
         draw()
-      } catch {
-        toast(t('error.generic'))
+      } catch (err) {
+        toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
       }
     })
 

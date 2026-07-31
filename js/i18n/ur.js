@@ -130,6 +130,8 @@ export const ur = {
   'products.sortPrice': 'قیمت',
   'products.sortNewest': 'نئی',
   'products.inactive': 'چھپی ہوئی',
+  'products.viewList': 'لسٹ ویو',
+  'products.viewGrid': 'گرڈ ویو',
 
   // product form
   'form.addTitle': 'نئی پروڈکٹ',
@@ -238,6 +240,8 @@ export const ur = {
   'categories.deleteConfirm':
     'یہ کیٹیگری ڈیلیٹ کریں؟ اس کے پروڈکٹس رہیں گے — بس بغیر کیٹیگری ہو جائیں گے۔',
   'categories.restoreDefaults': 'ڈیفالٹ کیٹیگریز شامل کریں',
+  'categories.duplicate': '“{name}” نام کی کیٹیگری پہلے سے موجود ہے',
+  'categories.alreadyThere': '“{name}” پہلے سے موجود تھی — لگا دی گئی',
 
   // settings
   'settings.title': 'سیٹنگز',
