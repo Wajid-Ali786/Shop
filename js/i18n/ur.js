@@ -32,6 +32,9 @@ export const ur = {
   'unit.dozen': 'درجن',
   'unit.packet': 'پیکٹ',
   'unit.bag': 'بوری',
+  'unit.bottle': 'بوتل',
+  'unit.tin': 'ٹین',
+  'unit.box': 'ڈبہ',
 
   // setup / config
   'setup.title': 'فائربیس سیٹ اپ درکار ہے',
@@ -138,7 +141,21 @@ export const ur = {
   'form.brand': 'برانڈ / کمپنی',
   'form.brandPlaceholder': 'مثلاً گارڈ',
   'form.category': 'کیٹیگری',
-  'form.unit': 'یونٹ',
+  'form.categories': 'کیٹیگریز',
+  'form.unit': 'کس میں ناپی جاتی ہے',
+
+  // loose vs pack
+  'form.sellBy': 'یہ کیسے بکتی ہے؟',
+  'form.sellByPack': 'پیکٹ / بوتل',
+  'form.sellByLoose': 'کھلی، تول کر',
+  'form.sellByPackHint':
+    'آپ اسے گنتے ہیں۔ اسٹاک 6 کا مطلب 6 بوتلیں ہیں — 6 لیٹر نہیں۔',
+  'form.sellByLooseHint': 'آپ اسے تولتے ہیں۔ اسٹاک 12.5 کا مطلب 12.5 کلو۔',
+  'form.packLabel': 'گنتی کس میں',
+  'form.packSize': 'ایک میں کتنا',
+  'form.packSizePlaceholder': '1.5',
+  'form.packSizeHint': 'اختیاری — ایک بوتل یا پیکٹ کے اندر کتنا ہے۔',
+  'form.packEach': 'فی عدد {size}',
   'form.costPrice': 'خرید قیمت',
   'form.salePrice': 'فروخت قیمت',
   'form.wholesalePrice': 'تھوک قیمت',
@@ -149,6 +166,7 @@ export const ur = {
   'form.tagsHint':
     'صرف تلاش کے لیے — لسٹ میں کبھی نظر نہیں آتے۔ وہ ہجے لکھیں جو آپ ٹائپ کر سکتے ہیں: sarf، واشنگ پاؤڈر، صابن',
   'form.tagsPlaceholder': 'ٹیگ لکھ کر Enter دبائیں',
+  'form.tagSuggestions': 'پہلے سے استعمال شدہ ٹیگ — دبا کر شامل کریں',
   'form.barcode': 'بارکوڈ / SKU',
   'form.expiryDate': 'میعاد کی تاریخ',
   'form.image': 'تصویر',
@@ -195,6 +213,8 @@ export const ur = {
   'stock.reason': 'وجہ',
   'stock.note': 'نوٹ',
   'stock.adjusted': 'اسٹاک اپ ڈیٹ ہو گیا',
+  'stock.addOne': 'ایک شامل کریں',
+  'stock.removeOne': 'ایک کم کریں',
   'stock.historyEmpty': 'ابھی کوئی اسٹاک سرگرمی نہیں',
 
   // reasons

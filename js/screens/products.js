@@ -1,10 +1,11 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, localizedName } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, productById, categoryById } from '../store.js'
+import { state, productById, categoryById, loadImage } from '../store.js'
 import { searchProducts } from '../lib/search.js'
-import { icon, empty, loading, productCard } from '../components.js'
+import { icon, empty, loading, productCard, fillImages } from '../components.js'
 import { openStockSheet } from './stock-sheet.js'
+import { wireQuickStock } from '../lib/quick-stock.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
 const ui = { query: '', categoryId: 'all', sort: 'name' }
@@ -50,13 +51,15 @@ export function renderProducts(root, rerender) {
     <button class="fab" data-add aria-label="${escAttr(t('home.quickAdd'))}">+</button>`
 
   wire(root, rerender)
+  fillImages(root, loadImage)
 }
 
 function filterProducts() {
   let list = state.products
 
   if (ui.categoryId !== 'all') {
-    list = list.filter((p) => p.categoryId === ui.categoryId)
+    // Ek product kai categories me ho sakta hai.
+    list = list.filter((p) => (p.categoryIds || []).includes(ui.categoryId))
   }
 
   if (ui.query.trim()) {
@@ -96,7 +99,7 @@ function listOrEmpty(visible) {
   if (visible.length) {
     const items = visible
       .map((p) => {
-        const cat = categoryById(p.categoryId)
+        const cat = categoryById((p.categoryIds || [])[0])
         return `<li>${productCard(p, {
           categoryIcon: cat?.icon,
           currency: state.settings.currency,
@@ -156,4 +159,5 @@ function wire(root, rerender) {
     const product = productById(el.dataset.adjust)
     if (product) openStockSheet(product)
   })
+  wireQuickStock(root, on)
 }

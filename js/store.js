@@ -15,6 +15,8 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -74,6 +76,21 @@ function col(name) {
   return collection(shopRef(), name)
 }
 
+/**
+ * Firestore ek batch me zyada se zyada 500 operations leta hai — us se aage
+ * poora batch fail ho jata hai. Pehle ye teen jagah bay-hisaab chal raha tha
+ * (saare products, saari movements), is liye ab tor kar bhejte hain.
+ */
+const BATCH_LIMIT = 450
+
+async function commitInChunks(ops) {
+  for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(dbf)
+    for (const apply of ops.slice(i, i + BATCH_LIMIT)) apply(batch)
+    await batch.commit()
+  }
+}
+
 // ------------------------------------------------------- live subscriptions
 
 /**
@@ -94,7 +111,7 @@ export function startSync() {
     onSnapshot(
       query(col('products'), orderBy('nameEn')),
       (snap) => {
-        state.products = snap.docs.map(withId)
+        state.products = snap.docs.map((d) => normalizeProduct(withId(d)))
         state.ready = true
         emit()
       },
@@ -156,6 +173,33 @@ function withId(d) {
   }
 }
 
+/**
+ * Purane products me `sellBy` nahi tha aur category ek hi hoti thi.
+ * Yahan parhte waqt hi nayi shakal me dhaal dete hain — is se purana record
+ * bina dobara likhe chalta rehta hai, aur baqi app ko do shaklein nahi
+ * sambhalni parti.
+ */
+function normalizeProduct(p) {
+  const isPacked = p.sellBy
+    ? p.sellBy === 'pack'
+    : !['kg', 'g', 'l', 'ml'].includes(p.unit)
+
+  return {
+    ...p,
+    sellBy: p.sellBy || (isPacked ? 'pack' : 'loose'),
+    packLabel: p.packLabel || (isPacked ? p.unit || 'piece' : null),
+    packSize: p.packSize ?? null,
+    packUnit: p.packUnit ?? null,
+    tags: p.tags || [],
+    // categoryId (ek) → categoryIds (kai). Dono me se jo mile.
+    categoryIds: Array.isArray(p.categoryIds)
+      ? p.categoryIds
+      : p.categoryId
+        ? [p.categoryId]
+        : [],
+  }
+}
+
 function toMillis(value) {
   if (!value) return Date.now()
   if (typeof value === 'number') return value
@@ -169,20 +213,30 @@ export function categoryById(id) {
   return state.categories.find((c) => c.id === id)
 }
 
-function categoryNameFor(categoryId) {
-  const cat = categoryById(categoryId)
-  if (!cat) return undefined
-  return [cat.nameEn, cat.nameUr].filter(Boolean).join(' ')
+/** Product ki saari categories — jo mil jayen (delete hui ho to chhoot jati hai). */
+export function categoriesOf(product) {
+  return (product?.categoryIds || []).map(categoryById).filter(Boolean)
+}
+
+/** Saari categories ke naam ek string me — searchBlob ke liye. */
+function categoryNamesFor(categoryIds) {
+  const names = (categoryIds || [])
+    .map(categoryById)
+    .filter(Boolean)
+    .map((c) => [c.nameEn, c.nameUr].filter(Boolean).join(' '))
+  return names.join(' ') || undefined
 }
 
 export async function createCategory(data) {
   const sortOrder = (state.categories.length + 1) * 10
-  await addDoc(col('categories'), {
+  const ref = await addDoc(col('categories'), {
     nameEn: data.nameEn,
     nameUr: data.nameUr ?? null,
     icon: data.icon ?? '📦',
     sortOrder,
   })
+  // Product form ko id chahiye hoti hai taake nayi category foran lag jaye.
+  return ref.id
 }
 
 export async function updateCategory(id, changes) {
@@ -192,20 +246,26 @@ export async function updateCategory(id, changes) {
 }
 
 /**
- * Category delete hone par uske products DELETE NAHI hote — sirf bina category
- * ke ho jate hain. Ghalti se poora stock gum ho jana bura hoga.
+ * Category delete hone par uske products DELETE NAHI hote — sirf us category
+ * se nikal jate hain. Ghalti se poora stock gum ho jana bura hoga.
  */
 export async function deleteCategory(id) {
-  const affected = state.products.filter((p) => p.categoryId === id)
-  const batch = writeBatch(dbf)
-  batch.delete(doc(col('categories'), id))
+  const affected = state.products.filter((p) => (p.categoryIds || []).includes(id))
+
+  const ops = [(batch) => batch.delete(doc(col('categories'), id))]
   for (const p of affected) {
-    batch.update(doc(col('products'), p.id), {
-      categoryId: null,
-      searchBlob: buildSearchBlob(p, undefined),
-    })
+    const remaining = (p.categoryIds || []).filter((c) => c !== id)
+    ops.push((batch) =>
+      batch.update(doc(col('products'), p.id), {
+        categoryIds: remaining,
+        // Purana single field bhi saaf kar dete hain warna migration wapas
+        // usay zinda kar degi.
+        categoryId: null,
+        searchBlob: buildSearchBlob(p, categoryNamesFor(remaining)),
+      }),
+    )
   }
-  await batch.commit()
+  await commitInChunks(ops)
 }
 
 // ---------------------------------------------------------------- products
@@ -219,7 +279,7 @@ export async function createProduct(input) {
   const payload = {
     ...cleanUndefined(input),
     stockQty,
-    searchBlob: buildSearchBlob(input, categoryNameFor(input.categoryId)),
+    searchBlob: buildSearchBlob(input, categoryNamesFor(input.categoryIds)),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   }
@@ -251,30 +311,35 @@ export async function updateProduct(id, changes) {
   const merged = { ...existing, ...changes }
   await updateDoc(doc(col('products'), id), {
     ...cleanUndefined(changes),
-    searchBlob: buildSearchBlob(merged, categoryNameFor(merged.categoryId)),
+    searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
     updatedAt: serverTimestamp(),
   })
 }
 
 export async function deleteProduct(id) {
-  // Us product ki saari movements bhi saath jaani chahiye.
+  const product = productById(id)
+
+  // Us product ki saari movements bhi saath jaani chahiye. Purane product ki
+  // sainkron movements ho sakti hain, is liye chunks me.
   const snap = await getDocs(query(col('movements'), where('productId', '==', id)))
-  const batch = writeBatch(dbf)
-  batch.delete(doc(col('products'), id))
-  snap.docs.forEach((d) => batch.delete(d.ref))
-  await batch.commit()
+
+  const ops = [(batch) => batch.delete(doc(col('products'), id))]
+  for (const d of snap.docs) ops.push((batch) => batch.delete(d.ref))
+  if (product?.imageId) {
+    ops.push((batch) => batch.delete(doc(col('images'), product.imageId)))
+  }
+  await commitInChunks(ops)
 }
 
 /** Category ka naam badle to us ke products ka searchBlob refresh karna parta hai. */
 export async function rebuildSearchBlobs() {
   if (!state.products.length) return
-  const batch = writeBatch(dbf)
-  for (const p of state.products) {
+  const ops = state.products.map((p) => (batch) =>
     batch.update(doc(col('products'), p.id), {
-      searchBlob: buildSearchBlob(p, categoryNameFor(p.categoryId)),
-    })
-  }
-  await batch.commit()
+      searchBlob: buildSearchBlob(p, categoryNamesFor(p.categoryIds)),
+    }),
+  )
+  await commitInChunks(ops)
 }
 
 // ------------------------------------------------------------------- stock
@@ -341,8 +406,70 @@ export async function setStockCount(productId, countedQty, note) {
   })
 }
 
-export function movementsFor(productId) {
-  return state.movements.filter((m) => m.productId === productId)
+/**
+ * Ek product ki apni poori history.
+ *
+ * Pehle ye `state.movements` se filter karta tha — lekin wo poori shop ki
+ * sirf aakhri 100 movements rakhta hai, is liye shop me 100 nayi entries hote
+ * hi purane product ki history KHALI dikhne lagti thi (halanke data mehfooz tha).
+ * Ab har product ki apni query chalti hai.
+ *
+ * `orderBy` jaan boojh kar nahi lagaya: equality filter + doosre field par
+ * orderBy Firestore me composite index maangta hai, aur wo user ko console me
+ * khud banana parta. Tarteeb yahan JS me laga lete hain.
+ */
+export function watchProductMovements(productId, callback, onError) {
+  return onSnapshot(
+    query(col('movements'), where('productId', '==', productId)),
+    (snap) => {
+      const rows = snap.docs.map(withId)
+      rows.sort((a, b) => b.createdAt - a.createdAt)
+      callback(rows)
+    },
+    onError,
+  )
+}
+
+// ------------------------------------------------------------------ images
+
+/**
+ * Tasveerein products se ALAG collection me hain.
+ *
+ * Pehle base64 tasveer product ke apne document me thi — is ka matlab tha ke
+ * products ki list load karne par har tasveer bhi download hoti thi (200
+ * products ≈ 19 MB). Ab product me sirf `imageId` hai, aur tasveer tab load
+ * hoti hai jab dikhani ho. Firestore ka cache use aage ke liye rakh leta hai.
+ */
+const imageCache = new Map()
+
+export async function saveImage(dataUrl) {
+  const ref = await addDoc(col('images'), { data: dataUrl, createdAt: serverTimestamp() })
+  imageCache.set(ref.id, dataUrl)
+  return ref.id
+}
+
+export async function loadImage(imageId) {
+  if (!imageId) return null
+  if (imageCache.has(imageId)) return imageCache.get(imageId)
+
+  try {
+    const snap = await getDoc(doc(col('images'), imageId))
+    const data = snap.exists() ? snap.data().data : null
+    imageCache.set(imageId, data)
+    return data
+  } catch {
+    return null
+  }
+}
+
+export async function deleteImage(imageId) {
+  if (!imageId) return
+  imageCache.delete(imageId)
+  try {
+    await deleteDoc(doc(col('images'), imageId))
+  } catch {
+    // Tasveer pehle hi ja chuki ho to koi baat nahi.
+  }
 }
 
 // ---------------------------------------------------------------- settings

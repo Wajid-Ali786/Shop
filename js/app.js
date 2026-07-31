@@ -25,6 +25,8 @@ const root = $('#app')
 let signedIn = false
 let authChecked = false
 let seeded = false
+/** Maujooda screen ka cleanup (Firestore listeners band karne ke liye). */
+let cleanupScreen = null
 
 // ------------------------------------------------------------------- boot
 
@@ -99,13 +101,22 @@ function render() {
   const previousPath = root.dataset.path
   root.dataset.path = path
 
+  // Pichhli screen ne koi Firestore listener lagaya ho to pehle usay band karo,
+  // warna screen badalne par listeners jamā hote rehte hain.
+  if (cleanupScreen) {
+    cleanupScreen()
+    cleanupScreen = null
+  }
+
   root.innerHTML = ''
   root.insertAdjacentHTML('afterbegin', banners())
 
   const screen = document.createElement('div')
   root.appendChild(screen)
 
-  routeTo(path, screen)
+  // Screen cleanup function lauta sakti hai.
+  const cleanup = routeTo(path, screen)
+  if (typeof cleanup === 'function') cleanupScreen = cleanup
 
   if (showNav) root.insertAdjacentHTML('beforeend', bottomNav(path))
 

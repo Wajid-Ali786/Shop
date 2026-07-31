@@ -2,10 +2,11 @@ import { esc, escAttr, on, toast } from '../lib/dom.js'
 import { t, unitLabel, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
 import { state, productById } from '../store.js'
-import { appBar, empty, loading, section, movementRow, stockLevel } from '../components.js'
+import { appBar, empty, loading, section, movementRow, stockLevel, quickStock } from '../components.js'
 import { formatMoney, formatDateTime, daysUntil } from '../lib/format.js'
 import { formatQty } from '../lib/units.js'
 import { openStockSheet } from './stock-sheet.js'
+import { wireQuickStock } from '../lib/quick-stock.js'
 
 /** Itne din ke andar miyaad khatam ho to "jald khatam" mana jata hai. */
 const EXPIRY_WARNING_DAYS = 30
@@ -67,6 +68,7 @@ export function renderStock(root, rerender) {
     if (product) openStockSheet(product)
   })
   on(root, 'click', '[data-share]', () => shareReorderList(reorder))
+  wireQuickStock(root, on)
 }
 
 function alertsTab(groups, reorder) {
@@ -118,7 +120,7 @@ function alertRow(product, tone = '') {
   bits.push(
     level === 'out'
       ? `<span style="color:var(--danger);font-weight:600">${esc(t('home.outOfStock'))}</span>`
-      : esc(formatQty(product.stockQty, product.unit, unitLabel)),
+      : esc(formatQty(product.stockQty, product, unitLabel)),
   )
   if (expiryDays !== null) {
     bits.push(
@@ -135,21 +137,22 @@ function alertRow(product, tone = '') {
           <p class="tiny muted">${bits.join(' · ')}</p>
         </div>
       </button>
-      <button class="mini-btn" data-adjust="${escAttr(product.id)}"
-        aria-label="${escAttr(t('detail.adjustStock'))}">+</button>
+      ${quickStock(product)}
     </li>`
 }
 
 function historyTab() {
-  if (!state.movements.length) return empty('📋', t('stock.historyEmpty'))
+  // Jin movements ka product ab mojood nahi, unhe pehle hi nikaal do — warna
+  // "history khali hai" ka faisla galat ho jata hai.
+  const known = state.movements.filter((m) => productById(m.productId))
+  if (!known.length) return empty('📋', t('stock.historyEmpty'))
 
-  const rows = state.movements
+  const rows = known
     .map((m) => {
       const product = productById(m.productId)
-      if (!product) return ''
       return movementRow(
         { ...m, when: formatDateTime(m.createdAt, getLang()) },
-        product.unit,
+        product,
         localizedName(product),
       )
     })
@@ -163,7 +166,7 @@ async function shareReorderList(reorder) {
   if (!reorder.length) return
 
   const lines = reorder.map(
-    (p) => `• ${localizedName(p)} — ${formatQty(p.stockQty, p.unit, unitLabel)}`,
+    (p) => `• ${localizedName(p)} — ${formatQty(p.stockQty, p, unitLabel)}`,
   )
   const header = state.settings.shopName
     ? `${state.settings.shopName}\n${t('stock.lowStockTitle')}`

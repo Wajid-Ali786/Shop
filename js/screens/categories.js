@@ -24,8 +24,8 @@ export function renderCategories(root) {
 
   const counts = new Map()
   for (const p of state.products) {
-    if (!p.categoryId) continue
-    counts.set(p.categoryId, (counts.get(p.categoryId) || 0) + 1)
+    // Ek product kai categories me gina jata hai.
+    for (const id of p.categoryIds || []) counts.set(id, (counts.get(id) || 0) + 1)
   }
 
   root.innerHTML = `
