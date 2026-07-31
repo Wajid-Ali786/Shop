@@ -1,10 +1,8 @@
 /**
- * YAHAN APNI FIREBASE PROJECT KI DETAILS DAALEIN
- * ==============================================
+ * Firebase project ki details.
  *
- * Firebase Console → apna project → Project settings (⚙️) → "Your apps"
- * → Web app (</> wala icon) → "Config" chunein. Wahan se poora object
- * copy kar ke neeche paste kar dein.
+ * Badalni hon to: Firebase Console → Project settings (⚙️) → "Your apps"
+ * → Web app (</> wala icon) → "Config".
  *
  * Tafseeli hidayat: FIREBASE-SETUP.md
  *
@@ -14,12 +12,14 @@
  * Isi wajah se login (Firebase Auth) lagana zaroori hai.
  */
 export const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyBkHRx3XIFwvpL6CuWP255LjawRXgwI7tc',
+  authDomain: 'shop-5060.firebaseapp.com',
+  projectId: 'shop-5060',
+  storageBucket: 'shop-5060.firebasestorage.app',
+  messagingSenderId: '580913428536',
+  appId: '1:580913428536:web:4a98e07afaa27bf7ed8ecd',
+  // measurementId sirf Google Analytics ke liye hota hai — ye app Analytics
+  // istemaal nahi karti, isliye yahan nahi rakha.
 }
 
 /** Config bhara hua hai ya nahi — app shuru me yahi check karti hai. */
