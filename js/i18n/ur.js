@@ -58,6 +58,10 @@ export const ur = {
   'auth.errNetwork': 'انٹرنیٹ نہیں ہے',
   'auth.errNotEnabled':
     'آپ کے فائربیس پروجیکٹ میں ای میل/پاس ورڈ سائن اِن آن نہیں ہے۔ Authentication → Sign-in method میں آن کریں۔',
+  'auth.errNoAuthSetup':
+    'آپ کے فائربیس پروجیکٹ میں ابھی Authentication سیٹ اپ نہیں ہوئی۔ Firebase Console → Build → Authentication → Get started کھول کر ای میل/پاس ورڈ آن کریں۔',
+  'auth.errUnauthorizedDomain':
+    'یہ ویب سائٹ آپ کے فائربیس authorized domains میں شامل نہیں۔ Authentication → Settings → Authorized domains میں شامل کریں۔',
   'auth.errGeneric': 'سائن ان نہیں ہو سکا',
 
   // offline banner

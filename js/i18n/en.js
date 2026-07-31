@@ -58,6 +58,10 @@ export const en = {
   'auth.errNetwork': 'No internet connection',
   'auth.errNotEnabled':
     'Email/Password sign-in is not enabled in your Firebase project. Enable it in Authentication → Sign-in method.',
+  'auth.errNoAuthSetup':
+    'Authentication is not set up in your Firebase project yet. Open Firebase Console → Build → Authentication → Get started, then enable Email/Password.',
+  'auth.errUnauthorizedDomain':
+    'This website is not in your Firebase authorized domains. Add it in Authentication → Settings → Authorized domains.',
   'auth.errGeneric': 'Could not sign in',
 
   // offline banner

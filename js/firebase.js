@@ -83,6 +83,12 @@ export function authErrorKey(code) {
       return 'auth.errNetwork'
     case 'auth/operation-not-allowed':
       return 'auth.errNotEnabled'
+    // Project me Authentication abhi setup hi nahi hui.
+    case 'auth/configuration-not-found':
+      return 'auth.errNoAuthSetup'
+    // Site ka domain Firebase ki authorized list me nahi hai.
+    case 'auth/unauthorized-domain':
+      return 'auth.errUnauthorizedDomain'
     default:
       return 'auth.errGeneric'
   }
