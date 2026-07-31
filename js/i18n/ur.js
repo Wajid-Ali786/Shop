@@ -39,9 +39,20 @@ export const ur = {
     'یہ ایپ آپ کا ڈیٹا آپ کے اپنے فائربیس پروجیکٹ میں محفوظ کرتی ہے۔ js/config.js کھول کر اپنی فائربیس کنفگ وہاں پیسٹ کریں۔',
   'setup.guide': 'مکمل ہدایات FIREBASE-SETUP.md میں ہیں',
 
+  // welcome (site khulne par pehli screen)
+  'welcome.title': 'کریانہ شاپ',
+  'welcome.tagline': 'آپ کی دکان کے پروڈکٹس اور اسٹاک، آپ کے فون میں۔',
+  'welcome.pointSearch': 'ہر چیز فوراً ملے — اردو، رومن یا انگریزی میں',
+  'welcome.pointStock': 'اسٹاک کلو، گرام، پیکٹ یا درجن میں',
+  'welcome.pointOffline': 'انٹرنیٹ کے بغیر بھی چلے، بعد میں خود سیو ہو',
+  'welcome.login': 'لاگ اِن',
+  'welcome.createAccount': 'نیا اکاؤنٹ بنائیں',
+
   // auth
   'auth.title': 'کریانہ شاپ',
   'auth.subtitle': 'اپنی دکان میں سائن ان کریں',
+  'auth.subtitleSignUp': 'اپنی دکان کے لیے اکاؤنٹ بنائیں',
+  'auth.passwordHint': 'کم از کم 6 حروف',
   'auth.email': 'ای میل',
   'auth.password': 'پاس ورڈ',
   'auth.signIn': 'سائن ان',

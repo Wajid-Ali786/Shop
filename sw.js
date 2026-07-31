@@ -50,6 +50,7 @@ const APP_FILES = [
   './js/screens/categories.js',
   './js/screens/dashboard.js',
   './js/screens/login.js',
+  './js/screens/welcome.js',
   './js/screens/product-detail.js',
   './js/screens/product-form.js',
   './js/screens/products.js',

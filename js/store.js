@@ -120,6 +120,13 @@ export function startSync() {
       shopRef(),
       (snap) => {
         state.settings = { ...defaultSettings(), ...(snap.data() || {}) }
+        // Welcome screen par login se PEHLE shop ka naam dikhana hota hai, aur
+        // us waqt Firestore se kuch nahi mil sakta — is liye local copy.
+        try {
+          localStorage.setItem('karyana.shopName', state.settings.shopName || '')
+        } catch {
+          // Private mode me localStorage band ho sakta hai — koi masla nahi.
+        }
         emit()
       },
       onError,

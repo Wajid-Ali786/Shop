@@ -10,6 +10,7 @@ import { initFirebase, watchAuth } from './firebase.js'
 import { state, subscribe, startSync, stopSync, seedDefaultCategories } from './store.js'
 import { bottomNav, NAV_PATHS, loading } from './components.js'
 
+import { renderWelcome } from './screens/welcome.js'
 import { renderLogin, renderSetupNeeded } from './screens/login.js'
 import { renderDashboard } from './screens/dashboard.js'
 import { renderProducts } from './screens/products.js'
@@ -47,6 +48,8 @@ if (!isConfigured()) {
       seeded = false
     } else if (!signedIn && wasSignedIn) {
       stopSync()
+      // Sign out ke baad andar wale route par mat atko — home page par le jao.
+      if (currentPath() !== '/') navigate('/')
     }
     render()
   })
@@ -78,8 +81,13 @@ function render() {
     return
   }
 
+  // Sign out ki halat me site ka home page welcome screen hai — seedha login
+  // form nahi. Login usi screen ke button se khulta hai.
   if (!signedIn) {
-    renderLogin(root)
+    const path = currentPath()
+    if (path === '/login') renderLogin(root, 'signin')
+    else if (path === '/signup') renderLogin(root, 'signup')
+    else renderWelcome(root)
     return
   }
 
