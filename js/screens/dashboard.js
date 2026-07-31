@@ -18,7 +18,9 @@ export function renderDashboard(root) {
     (sum, p) => sum + (p.stockQty || 0) * (p.costPrice ?? p.salePrice ?? 0),
     0,
   )
-  const recent = state.movements.slice(0, 6)
+  // Pehle wo movements chhanto jin ka product mojood hai, PHIR 6 lo — warna
+  // agar aakhri 6 kisi delete-shuda product ki hon to list khali lagti hai.
+  const recent = state.movements.filter((m) => productById(m.productId)).slice(0, 6)
 
   root.innerHTML = `
     <div class="screen">
@@ -63,10 +65,9 @@ export function renderDashboard(root) {
               ? `<ul class="plist">${recent
                   .map((m) => {
                     const product = productById(m.productId)
-                    if (!product) return ''
                     return movementRow(
                       { ...m, when: formatDateTime(m.createdAt, getLang()) },
-                      product.unit,
+                      product,
                       localizedName(product),
                     )
                   })

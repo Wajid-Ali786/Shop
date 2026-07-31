@@ -1,16 +1,19 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, unitLabel, localizedName, getLang } from '../i18n/index.js'
 import { goBack, navigate } from '../lib/router.js'
-import { state, productById, categoryById, movementsFor } from '../store.js'
-import { appBar, icon, empty, loading, section, stockBadge, movementRow, productThumbLarge } from '../components.js'
+import { state, productById, categoriesOf, watchProductMovements, loadImage } from '../store.js'
+import {
+  appBar, icon, empty, loading, section, stockBadge,
+  movementRow, productThumbLarge, fillImages,
+} from '../components.js'
 import { formatMoney, formatDate, formatDateTime, daysUntil } from '../lib/format.js'
-import { formatQty } from '../lib/units.js'
+import { formatQty, formatPackSize, formatPackTotal, priceUnitLabel } from '../lib/units.js'
 import { openStockSheet } from './stock-sheet.js'
 
 export function renderProductDetail(root, productId) {
   if (!state.ready) {
     root.innerHTML = loading()
-    return
+    return undefined
   }
 
   const product = productById(productId)
@@ -21,77 +24,119 @@ export function renderProductDetail(root, productId) {
         ${empty('❓', t('detail.notFound'))}
       </div>`
     on(root, 'click', '[data-back]', () => navigate('/products'))
-    return
+    return undefined
   }
 
-  const category = categoryById(product.categoryId)
-  const movements = movementsFor(productId)
-  // Cost price na ho to sale price par hi qeemat laga dete hain.
-  const stockValue = (product.stockQty || 0) * (product.costPrice ?? product.salePrice ?? 0)
-  const expiryDays = product.expiryDate ? daysUntil(product.expiryDate) : null
+  let movements = null
 
-  root.innerHTML = `
-    <div class="screen screen--form">
-      ${appBar(localizedName(product), {
-        back: true,
-        action: `<button class="icon-btn" data-edit aria-label="${escAttr(t('common.edit'))}">${icon('edit')}</button>`,
-      })}
+  /**
+   * Har product ki apni movements query.
+   *
+   * Pehle ye poori shop ki aakhri 100 movements me se filter hoti thi, is liye
+   * shop me 100 nayi entries hote hi purane product ki history khali dikhne
+   * lagti thi. Ab is product ki poori history aati hai.
+   */
+  const unsubscribe = watchProductMovements(
+    productId,
+    (rows) => {
+      movements = rows
+      draw()
+    },
+    () => {
+      movements = []
+      draw()
+    },
+  )
 
-      <div class="pad">
-        <div class="card row" style="margin-bottom:16px;align-items:flex-start">
-          ${productThumbLarge(product, category?.icon)}
-          <div style="min-width:0;flex:1">
-            <h2 class="truncate" dir="auto">${esc(localizedName(product))}</h2>
-            ${product.brand ? `<p class="small muted">${esc(product.brand)}</p>` : ''}
-            ${category ? `<p class="tiny muted" style="margin-top:2px">${esc(category.icon || '')} ${esc(localizedName(category))}</p>` : ''}
-            <div style="margin-top:8px">${stockBadge(product)}</div>
+  function draw() {
+    const categories = categoriesOf(product)
+    // Cost price na ho to sale price par hi qeemat laga dete hain.
+    const stockValue = (product.stockQty || 0) * (product.costPrice ?? product.salePrice ?? 0)
+    const expiryDays = product.expiryDate ? daysUntil(product.expiryDate) : null
+    const packSize = formatPackSize(product, unitLabel)
+    const packTotal = formatPackTotal(product.stockQty, product, unitLabel)
+
+    root.innerHTML = `
+      <div class="screen screen--form">
+        ${appBar(localizedName(product), {
+          back: true,
+          action: `<button class="icon-btn" data-edit aria-label="${escAttr(t('common.edit'))}">${icon('edit')}</button>`,
+        })}
+
+        <div class="pad">
+          <div class="card row" style="margin-bottom:16px;align-items:flex-start">
+            ${productThumbLarge(product, categories[0]?.icon)}
+            <div style="min-width:0;flex:1">
+              <h2 class="truncate" dir="auto">${esc(localizedName(product))}</h2>
+              ${product.brand ? `<p class="small muted">${esc(product.brand)}</p>` : ''}
+              ${packSize ? `<p class="small muted">${esc(t('form.packEach', { size: packSize }))}</p>` : ''}
+              ${
+                categories.length
+                  ? `<p class="tiny muted" style="margin-top:4px">${categories
+                      .map((c) => `${esc(c.icon || '')} ${esc(localizedName(c))}`)
+                      .join(' · ')}</p>`
+                  : ''
+              }
+              <div style="margin-top:8px">${stockBadge(product)}</div>
+            </div>
           </div>
+
+          <div class="grid-2" style="margin-bottom:16px">
+            <div class="card">
+              <p class="tiny muted">${esc(t('form.salePrice'))}</p>
+              <p class="bold price" style="font-size:1.3rem">${esc(formatMoney(product.salePrice, state.settings.currency))}</p>
+              <p class="tiny faint">${esc(t('form.perUnit', { unit: priceUnitLabel(product, unitLabel) }))}</p>
+            </div>
+            <div class="card">
+              <p class="tiny muted">${esc(t('detail.stockValue'))}</p>
+              <p class="bold" style="font-size:1.3rem">${esc(formatMoney(stockValue, state.settings.currency))}</p>
+              <p class="tiny faint">
+                ${esc(formatQty(product.stockQty, product, unitLabel))}
+                ${packTotal ? ` = ${esc(packTotal)}` : ''}
+              </p>
+            </div>
+          </div>
+
+          ${pricesCard(product)}
+          ${expiryCard(product, expiryDays)}
+          ${tagsCard(product)}
+          ${
+            product.barcode
+              ? `<div class="card" style="margin-bottom:16px">
+                   <p class="tiny muted">${esc(t('form.barcode'))}</p>
+                   <p class="bold" dir="ltr">${esc(product.barcode)}</p>
+                 </div>`
+              : ''
+          }
+
+          ${section(
+            t('detail.history'),
+            movements === null
+              ? loading()
+              : movements.length
+                ? `<ul class="plist">${movements
+                    .map((m) =>
+                      movementRow({ ...m, when: formatDateTime(m.createdAt, getLang()) }, product),
+                    )
+                    .join('')}</ul>`
+                : empty('📋', t('detail.noHistory')),
+          )}
         </div>
 
-        <div class="grid-2" style="margin-bottom:16px">
-          <div class="card">
-            <p class="tiny muted">${esc(t('form.salePrice'))}</p>
-            <p class="bold price" style="font-size:1.3rem">${esc(formatMoney(product.salePrice, state.settings.currency))}</p>
-            <p class="tiny faint">${esc(t('form.perUnit', { unit: unitLabel(product.unit) }))}</p>
-          </div>
-          <div class="card">
-            <p class="tiny muted">${esc(t('detail.stockValue'))}</p>
-            <p class="bold" style="font-size:1.3rem">${esc(formatMoney(stockValue, state.settings.currency))}</p>
-            <p class="tiny faint">${esc(formatQty(product.stockQty, product.unit, unitLabel))}</p>
-          </div>
+        <div class="savebar">
+          <button class="btn btn--primary btn--full" data-adjust-open>${esc(t('detail.adjustStock'))}</button>
         </div>
+      </div>`
 
-        ${pricesCard(product)}
-        ${expiryCard(product, expiryDays)}
-        ${tagsCard(product)}
-        ${product.barcode ? `<div class="card" style="margin-bottom:16px">
-            <p class="tiny muted">${esc(t('form.barcode'))}</p>
-            <p class="bold" dir="ltr">${esc(product.barcode)}</p>
-          </div>` : ''}
+    on(root, 'click', '[data-back]', () => goBack())
+    on(root, 'click', '[data-edit]', () => navigate(`/product/${productId}/edit`))
+    on(root, 'click', '[data-adjust-open]', () => openStockSheet(product))
+    fillImages(root, loadImage)
+  }
 
-        ${section(
-          t('detail.history'),
-          movements.length
-            ? `<ul class="plist">${movements
-                .map((m) =>
-                  movementRow(
-                    { ...m, when: formatDateTime(m.createdAt, getLang()) },
-                    product.unit,
-                  ),
-                )
-                .join('')}</ul>`
-            : empty('📋', t('detail.noHistory')),
-        )}
-      </div>
-
-      <div class="savebar">
-        <button class="btn btn--primary btn--full" data-adjust-open>${esc(t('detail.adjustStock'))}</button>
-      </div>
-    </div>`
-
-  on(root, 'click', '[data-back]', () => goBack())
-  on(root, 'click', '[data-edit]', () => navigate(`/product/${productId}/edit`))
-  on(root, 'click', '[data-adjust-open]', () => openStockSheet(product))
+  draw()
+  // app.js screen chhodte hi ye chala dega — warna listener chalta reh jayega.
+  return unsubscribe
 }
 
 function pricesCard(product) {

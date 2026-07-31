@@ -24,8 +24,8 @@ export function renderCategories(root) {
 
   const counts = new Map()
   for (const p of state.products) {
-    if (!p.categoryId) continue
-    counts.set(p.categoryId, (counts.get(p.categoryId) || 0) + 1)
+    // Ek product kai categories me gina jata hai.
+    for (const id of p.categoryIds || []) counts.set(id, (counts.get(id) || 0) + 1)
   }
 
   root.innerHTML = `
@@ -118,6 +118,7 @@ function openEditor(category) {
         `<input id="cat-ur" value="${escAttr(category?.nameUr || '')}" dir="rtl">`,
       )}
 
+      <div id="cat-error"></div>
       <button class="btn btn--primary btn--full" id="cat-save">${esc(t('common.save'))}</button>`
 
     body.querySelectorAll('[data-icon]').forEach((btn) => {
@@ -131,8 +132,11 @@ function openEditor(category) {
     })
 
     const saveBtn = $('#cat-save', body)
+    const errorBox = $('#cat-error', body)
+
     saveBtn.addEventListener('click', async () => {
       const nameEn = $('#cat-en', body).value.trim()
+      errorBox.innerHTML = ''
       if (!nameEn) return
 
       saveBtn.disabled = true
@@ -152,6 +156,13 @@ function openEditor(category) {
       } catch (err) {
         saveBtn.disabled = false
         saveBtn.textContent = t('common.save')
+
+        // Duplicate naam form ke andar hi batana behtar hai — toast gayab ho
+        // jata hai aur user ko pata nahi chalta ke kya theek karna hai.
+        if (err?.code === 'duplicate-category') {
+          errorBox.innerHTML = `<div class="auth__error">${esc(t('categories.duplicate', { name: nameEn }))}</div>`
+          return
+        }
         toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
       }
     })

@@ -20,9 +20,18 @@ Us ke bagair app sirf "Firebase setup needed" wali screen dikhayegi.
 
 ## Features
 
-- **Products** — tasveer (camera se), froukht/khareed/thok qeemat, category, unit,
+- **Products** — tasveer (camera se), froukht/khareed/thok qeemat, categories,
   miyaad ki tareekh, barcode
-- **Chhupe hue search tags** — list me kabhi nazar nahi aate, sirf search inhe parhta hai
+- **Khuli ya packet** — har product ke liye tay karein ke wo tol kar bikti hai
+  ya gin kar. Cold drink 1.5L par stock `6` likhein to **"6 bottle"** aata hai,
+  "6 litre" nahi — aur detail par kul `9 L` bhi
+- **Ek product, kai categories** — chawal "Grains" me bhi ho sakta hai aur
+  "Ramzan Special" me bhi
+- **Ek tap me stock** — product ki row par hi `−` aur `+`; badge par tap karein
+  to poora sheet (miqdaar, wajah, note)
+- **Chhupe hue search tags** — list me kabhi nazar nahi aate, sirf search inhe parhta hai.
+  Likhte waqt pehle se istemaal shuda tags tajweez hote hain, taake ek hi cheez
+  ke teen alag hijje na banein
 - **Samajhdar search** — Roman Urdu, Urdu aur English, hijje ki galti ke saath bhi:
   `chawal` / `chaawal` / `chawl` / `چاول` — chaaron se ek hi product milta hai
 - **Stock** — kilo, gram, litre, ml, adad, darjan, packet, bori.
@@ -96,8 +105,27 @@ python3 -m http.server 5500
 
 ## Stock kaise badalta hai
 
-Stock sirf **"Adjust stock"** se badalta hai — product edit form se nahi.
+Product edit form se stock nahi badalta. Teen tareeqe hain:
 
-Wajah: `adjustStock()` aur `setStockCount()` (dekhein `js/store.js`) product ka
-`stockQty` aur `movements` ka record **ek hi Firestore transaction** me likhte hain.
-Is liye history kabhi asal stock se mismatch nahi hoti, chahe do phone ek saath chal rahe hon.
+1. **Row par `−` / `+`** — ek tap, foran. Kam karna "becha" aur barhana "naya maal
+   aaya" ke tor par history me jata hai
+2. **Badge par tap** — poora sheet: miqdaar, wajah, note
+3. **Ginti** — "abhi asal me itna para hai"
+
+Teenon `adjustStock()` / `setStockCount()` se guzarte hain (`js/store.js`), jo
+product ka `stockQty` aur `movements` ka record **ek hi Firestore transaction**
+me likhte hain. Is liye history kabhi asal stock se mismatch nahi hoti, chahe do
+phone ek saath chal rahe hon.
+
+## Media (tasveerein) kahan hain
+
+Camera se aayi tasveer 640px tak chhoti ho kar WebP me compress hoti hai (~50-70 KB),
+phir **`shops/{uid}/images/{id}`** me jati hai — product ke apne document me nahi.
+Product me sirf `imageId` hota hai.
+
+Wajah: pehle tasveer product ke document ke andar thi, to products ki list load
+karne par har tasveer bhi download hoti thi (200 products ≈ 19 MB). Ab list halki
+hai aur tasveer sirf zaroorat par aati hai.
+
+Firebase **Storage** istemaal nahi kiya kyunki wo naye projects me credit card
+maangta hai — ye tareeqa free (Spark) plan me chalta hai.

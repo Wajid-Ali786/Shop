@@ -5,7 +5,7 @@
 import { esc, escAttr } from './lib/dom.js'
 import { t, unitLabel, localizedName } from './i18n/index.js'
 import { formatMoney } from './lib/format.js'
-import { formatQty } from './lib/units.js'
+import { formatQty, formatPackSize, priceUnitLabel } from './lib/units.js'
 
 // ------------------------------------------------------------------ icons
 
@@ -22,6 +22,10 @@ export const ICONS = {
     '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" stroke-linecap="round" stroke-linejoin="round"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/>',
   plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
+  viewList:
+    '<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>',
+  viewGrid:
+    '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
 }
 
 export function icon(name, cls = '') {
@@ -101,20 +105,31 @@ export function stockLevel(p) {
 
 export function stockBadge(p) {
   const level = stockLevel(p)
-  const text = level === 'out' ? t('home.outOfStock') : formatQty(p.stockQty, p.unit, unitLabel)
+  const text = level === 'out' ? t('home.outOfStock') : formatQty(p.stockQty, p, unitLabel)
   const cls = level === 'out' ? ' badge--out' : level === 'low' ? ' badge--low' : ''
   return `<span class="badge${cls}">${esc(text)}</span>`
 }
 
+/**
+ * Tasveer ab alag collection me hai, is liye card pehle khali dabba dikhata
+ * hai aur `data-image` dekh kar screen baad me tasveer bhar deti hai. Purane
+ * products me tasveer document ke andar hi hoti thi — wo bhi chalti hai.
+ */
 function thumb(product, fallback, big = false) {
   const cls = big ? 'thumb thumb--lg' : 'thumb'
   if (product.image) {
     return `<div class="${cls}"><img src="${escAttr(product.image)}" alt="" loading="lazy"></div>`
   }
+  if (product.imageId) {
+    return `<div class="${cls}" data-image="${escAttr(product.imageId)}">${esc(fallback || '📦')}</div>`
+  }
   return `<div class="${cls}">${esc(fallback || '📦')}</div>`
 }
 
 export function productCard(product, { categoryIcon, currency }) {
+  // Pack products par "1.5 L each" — warna sirf naam se pata nahi chalta.
+  const packSize = formatPackSize(product, unitLabel)
+
   return `
     <div class="pcard">
       <button class="pcard__main" data-open="${escAttr(product.id)}">
@@ -124,19 +139,90 @@ export function productCard(product, { categoryIcon, currency }) {
             <p class="bold truncate">${esc(localizedName(product))}</p>
             ${product.isActive === false ? `<span class="badge badge--hidden">${esc(t('products.inactive'))}</span>` : ''}
           </div>
-          ${product.brand ? `<p class="small muted truncate">${esc(product.brand)}</p>` : ''}
+          <p class="small muted truncate">
+            ${product.brand ? esc(product.brand) : ''}
+            ${product.brand && packSize ? ' · ' : ''}
+            ${packSize ? esc(t('form.packEach', { size: packSize })) : ''}
+          </p>
           <p class="small" style="margin-top:2px">
             <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
-            <span class="faint"> / ${esc(unitLabel(product.unit))}</span>
+            <span class="faint"> / ${esc(priceUnitLabel(product, unitLabel))}</span>
           </p>
         </div>
       </button>
       <div class="pcard__side">
-        ${stockBadge(product)}
-        <button class="mini-btn" data-adjust="${escAttr(product.id)}"
-          aria-label="${escAttr(t('detail.adjustStock'))}">+</button>
+        ${quickStock(product)}
       </div>
     </div>`
+}
+
+/**
+ * Stock ek tap me kam/zyada — sheet kholne ki zaroorat nahi.
+ *
+ * Dukan par sab se aam kaam yehi hai: ek cheez bik gayi, stock ek kam.
+ * Badge par tap karne se poora sheet khulta hai jahan miqdaar, wajah aur
+ * note likh sakte hain.
+ */
+export function quickStock(product) {
+  const out = (product.stockQty || 0) <= 0
+  // Buttons badge ke NEECHE — saath rakhne se product ka naam kat jata tha.
+  return `
+    <div class="quickstock">
+      <button class="quickstock__value" data-adjust="${escAttr(product.id)}"
+        aria-label="${escAttr(t('detail.adjustStock'))}">${stockBadge(product)}</button>
+      <div class="quickstock__row">
+        <button class="quickstock__btn" data-minus="${escAttr(product.id)}"
+          ${out ? 'disabled' : ''} aria-label="${escAttr(t('stock.removeOne'))}">−</button>
+        <button class="quickstock__btn quickstock__btn--plus" data-plus="${escAttr(product.id)}"
+          aria-label="${escAttr(t('stock.addOne'))}">+</button>
+      </div>
+    </div>`
+}
+
+/**
+ * Grid view — do products fi qatar, tasveer bari.
+ *
+ * Jin dukandaron ko cheez tasveer se pehchanni ho un ke liye ye behtar hai;
+ * jinhe naam aur stock tezi se scan karna ho, un ke liye list view.
+ */
+export function productGridCard(product, { categoryIcon, currency }) {
+  const packSize = formatPackSize(product, unitLabel)
+  const out = (product.stockQty || 0) <= 0
+
+  return `
+    <div class="gcard">
+      <button class="gcard__main" data-open="${escAttr(product.id)}">
+        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}</div>
+        <p class="gcard__name" dir="auto">${esc(localizedName(product))}</p>
+        <p class="gcard__sub truncate">
+          ${packSize ? esc(t('form.packEach', { size: packSize })) : product.brand ? esc(product.brand) : '&nbsp;'}
+        </p>
+        <p class="gcard__price">
+          <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
+          <span class="faint tiny"> / ${esc(priceUnitLabel(product, unitLabel))}</span>
+        </p>
+      </button>
+
+      <div class="gcard__foot">
+        <button class="quickstock__value" data-adjust="${escAttr(product.id)}"
+          aria-label="${escAttr(t('detail.adjustStock'))}">${stockBadge(product)}</button>
+        <div class="quickstock__row">
+          <button class="quickstock__btn" data-minus="${escAttr(product.id)}"
+            ${out ? 'disabled' : ''} aria-label="${escAttr(t('stock.removeOne'))}">−</button>
+          <button class="quickstock__btn quickstock__btn--plus" data-plus="${escAttr(product.id)}"
+            aria-label="${escAttr(t('stock.addOne'))}">+</button>
+        </div>
+      </div>
+    </div>`
+}
+
+/** Thumb ka andar ka hissa — grid aur list dono istemaal karte hain. */
+function thumbInner(product, fallback) {
+  if (product.image) return `<img src="${escAttr(product.image)}" alt="" loading="lazy">`
+  if (product.imageId) {
+    return `<span data-image="${escAttr(product.imageId)}">${esc(fallback || '📦')}</span>`
+  }
+  return esc(fallback || '📦')
 }
 
 export function productThumbLarge(product, fallback) {
@@ -145,7 +231,26 @@ export function productThumbLarge(product, fallback) {
 
 // -------------------------------------------------------------- movements
 
-export function movementRow(movement, unit, productName = '') {
+/**
+ * Jin thumbnails par `data-image` hai un ki tasveer alag collection se
+ * mangwa kar bhar deta hai. Screen render hone ke baad ek baar chalta hai.
+ */
+export function fillImages(root, loadImage) {
+  for (const el of root.querySelectorAll('[data-image]')) {
+    const id = el.dataset.image
+    el.removeAttribute('data-image')
+    loadImage(id).then((data) => {
+      if (!data || !el.isConnected) return
+      // Grid me placeholder ek <span> hai jo thumb ke andar baitha hai —
+      // usay poora badalna hota hai, warna emoji tasveer ke saath reh jata.
+      const img = `<img src="${escAttr(data)}" alt="">`
+      if (el.tagName === 'SPAN') el.outerHTML = img
+      else el.innerHTML = img
+    })
+  }
+}
+
+export function movementRow(movement, product, productName = '') {
   const isAdjust = movement.type === 'adjust'
   const positive = movement.type === 'in'
   const sign = isAdjust ? '=' : positive ? '+' : '−'
@@ -160,8 +265,8 @@ export function movementRow(movement, unit, productName = '') {
         <p class="tiny muted">${esc(movement.when)}${movement.note ? ` · ${esc(movement.note)}` : ''}</p>
       </div>
       <div class="mrow__qty">
-        <p class="small bold">${isAdjust ? '' : sign}${esc(formatQty(movement.qty, unit, unitLabel))}</p>
-        <p class="tiny faint">→ ${esc(formatQty(movement.balanceAfter, unit, unitLabel))}</p>
+        <p class="small bold">${isAdjust ? '' : sign}${esc(formatQty(movement.qty, product, unitLabel))}</p>
+        <p class="tiny faint">→ ${esc(formatQty(movement.balanceAfter, product, unitLabel))}</p>
       </div>
     </li>`
 }

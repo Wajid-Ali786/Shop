@@ -132,7 +132,12 @@ function allowedTypos(word) {
 /**
  * Search do marhalon me:
  *   1. Normalized substring match — foran, aur wahi deta hai jo user soch raha hai.
- *   2. Nateeje kam hon to lafz-ba-lafz fuzzy — hijje ki galti (chawl → chawal) pakadta hai.
+ *   2. Kuch bhi na mile to lafz-ba-lafz fuzzy — hijje ki galti (chawl → chawal) pakadta hai.
+ *
+ * Fuzzy SIRF tab chalta hai jab substring se bilkul kuch na mile. Pehle ye
+ * 3 se kam nataij par bhi chal parta tha, aur vowel folding ke baad "cula"
+ * (cola) aur "culd" (cold) me sirf ek harf ka farq bachta hai — is liye
+ * "cola" search karne par Sprite bhi aa jata tha.
  */
 export function searchProducts(products, query) {
   const q = String(query || '').trim()
@@ -153,22 +158,22 @@ export function searchProducts(products, query) {
   }
 
   const hits = [...starts, ...contains]
-  if (hits.length >= 3 || !nq) return hits
+  if (hits.length > 0 || !nq) return hits
 
-  // ---- fuzzy fallback ----
-  const seen = new Set(hits.map((p) => p.id))
-  const queryWords = nq.split(' ').filter(Boolean)
+  // ---- fuzzy fallback: sirf tab jab kuch bhi na mila ho ----
   const scored = []
 
   for (const p of products) {
-    if (seen.has(p.id)) continue
     const words = (p.searchBlob || '').split(' ').filter(Boolean)
 
     let best = Infinity
-    for (const qw of queryWords) {
+    for (const qw of nq.split(' ').filter(Boolean)) {
       const budget = allowedTypos(qw)
       if (budget === 0) continue
       for (const w of words) {
+        // Pehla harf mel khana zaroori hai — warna ek harf ki tabdeeli se
+        // bilkul alag lafz match ho jate hain.
+        if (w[0] !== qw[0]) continue
         const d = editDistance(qw, w, budget)
         if (d <= budget && d < best) best = d
       }
@@ -177,6 +182,39 @@ export function searchProducts(products, query) {
   }
 
   scored.sort((a, b) => a.score - b.score)
-  for (const s of scored) hits.push(s.product)
-  return hits
+  return scored.map((s) => s.product)
+}
+
+/**
+ * Tag box ke liye tajaweez — jo tags pehle se doosre products par lage hain.
+ *
+ * Isi se tag sprawl rukta hai: "cold drink", "cold-drink", "colddrink" teen
+ * alag tags banane ki jagah shopkeeper pehle wala hi chun leta hai.
+ */
+export function suggestTags(products, input, alreadyPicked = [], max = 8) {
+  const seen = new Map()
+  const picked = new Set(alreadyPicked.map((t) => t.toLowerCase()))
+
+  for (const p of products) {
+    for (const tag of p.tags || []) {
+      const key = tag.toLowerCase()
+      if (picked.has(key)) continue
+      seen.set(key, (seen.get(key) || 0) + 1)
+    }
+  }
+
+  const nq = normalize(String(input || '').trim())
+  const all = [...seen.entries()].map(([tag, count]) => ({ tag, count }))
+
+  const matches = nq
+    ? all.filter(({ tag }) => {
+        const nt = normalize(tag)
+        // Poore tag me ya us ke kisi lafz ke shuru me — "co" se "cold drink".
+        return nt.includes(nq) || nt.split(' ').some((w) => w.startsWith(nq))
+      })
+    : all
+
+  // Jo tag zyada products par laga hai wo pehle — wahi "asli" tag hota hai.
+  matches.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+  return matches.slice(0, max).map((m) => m.tag)
 }

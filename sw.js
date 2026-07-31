@@ -43,6 +43,7 @@ const APP_FILES = [
   './js/lib/dom.js',
   './js/lib/format.js',
   './js/lib/images.js',
+  './js/lib/quick-stock.js',
   './js/lib/router.js',
   './js/lib/search.js',
   './js/lib/theme.js',

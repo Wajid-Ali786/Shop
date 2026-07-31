@@ -32,6 +32,9 @@ export const en = {
   'unit.dozen': 'dozen',
   'unit.packet': 'packet',
   'unit.bag': 'bag',
+  'unit.bottle': 'bottle',
+  'unit.tin': 'tin',
+  'unit.box': 'box',
 
   // setup / config
   'setup.title': 'Firebase setup needed',
@@ -127,6 +130,8 @@ export const en = {
   'products.sortPrice': 'Price',
   'products.sortNewest': 'Newest',
   'products.inactive': 'Hidden',
+  'products.viewList': 'List view',
+  'products.viewGrid': 'Grid view',
 
   // product form
   'form.addTitle': 'Add product',
@@ -138,7 +143,21 @@ export const en = {
   'form.brand': 'Brand / company',
   'form.brandPlaceholder': 'e.g. Guard',
   'form.category': 'Category',
-  'form.unit': 'Unit',
+  'form.categories': 'Categories',
+  'form.unit': 'Measured in',
+
+  // loose vs pack — is se tay hota hai ke "6" ka matlab kya hai
+  'form.sellBy': 'How is it sold?',
+  'form.sellByPack': 'Packet / bottle',
+  'form.sellByLoose': 'Loose, by weight',
+  'form.sellByPackHint':
+    'You count them. Stock 6 means 6 bottles — not 6 litres.',
+  'form.sellByLooseHint': 'You weigh it. Stock 12.5 means 12.5 kg.',
+  'form.packLabel': 'Counted as',
+  'form.packSize': 'Size of one',
+  'form.packSizePlaceholder': '1.5',
+  'form.packSizeHint': 'Optional — how much is inside one bottle or packet.',
+  'form.packEach': '{size} each',
   'form.costPrice': 'Purchase price',
   'form.salePrice': 'Sale price',
   'form.wholesalePrice': 'Wholesale price',
@@ -149,6 +168,7 @@ export const en = {
   'form.tagsHint':
     'Only used for search — never shown in the list. Add spellings you might type: sarf, washing powder, صابن',
   'form.tagsPlaceholder': 'Type a tag and press Enter',
+  'form.tagSuggestions': 'Tags you already use — tap to add',
   'form.barcode': 'Barcode / SKU',
   'form.expiryDate': 'Expiry date',
   'form.image': 'Photo',
@@ -195,6 +215,8 @@ export const en = {
   'stock.reason': 'Reason',
   'stock.note': 'Note',
   'stock.adjusted': 'Stock updated',
+  'stock.addOne': 'Add one',
+  'stock.removeOne': 'Remove one',
   'stock.historyEmpty': 'No stock activity yet',
 
   // reasons
@@ -218,6 +240,8 @@ export const en = {
   'categories.deleteConfirm':
     'Delete this category? Its products stay — they just become uncategorized.',
   'categories.restoreDefaults': 'Add default categories',
+  'categories.duplicate': 'A category called “{name}” already exists',
+  'categories.alreadyThere': '“{name}” already existed — ticked it for you',
 
   // settings
   'settings.title': 'Settings',
