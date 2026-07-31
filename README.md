@@ -1,65 +1,102 @@
 # Karyana Shop
 
-Chhoti karyana shops ke liye mobile-first **offline** product aur stock management app.
-Phone par install ho jati hai (PWA) aur internet ke bagair poori chalti hai.
+Chhoti karyana shops ke liye mobile-first product aur stock management web app.
+
+Plain **HTML + CSS + JavaScript** — koi framework nahi, koi build step nahi.
+Repo ki files seedha GitHub Pages par chal jaati hain. Data aap ke apne
+**Firebase** project me rehta hai, aur app internet ke bagair bhi chalti hai.
+
+---
+
+## Pehle ye karein
+
+Setup ek baar karna hai (~10 minute, bilkul free):
+
+**➡️ [FIREBASE-SETUP.md](FIREBASE-SETUP.md)**
+
+Us ke bagair app sirf "Firebase setup needed" wali screen dikhayegi.
+
+---
 
 ## Features
 
-- **Products** — image (camera se), sale/purchase/thok price, category, unit, stock, expiry date, barcode
-- **Hidden search tags** — product list me nazar nahi aate, sirf search inhe parhta hai
-- **Smart search** — Roman Urdu, Urdu script aur English, spelling ki galti ke saath bhi
-  (`chawal` / `chaawal` / `chawl` / `چاول` — sab se ek hi product milta hai)
-- **Stock** — kg, gram, litre, ml, piece, dozen, packet, bori. `250 g` likhein to `0.25 kg` ban jata hai
-- **Stock history** — har tabdeeli ka record: kab, kitna, kis wajah se (naya maal / becha / kharab / ginti)
-- **Reorder list** — jo cheezein khatam ya kam hain, unki list seedha WhatsApp par supplier ko bhejein
-- **Expiry alerts** — 30 din ke andar khatam hone wali cheezein alag dikhti hain
-- **Dashboard** — total products, stock ki maliyat, low stock, expiring soon
-- **Backup / Restore** — poora data (tasveerein samet) ek file me; WhatsApp/Drive par share bhi
-- **English + Urdu (اردو)** — poora RTL layout
+- **Products** — tasveer (camera se), froukht/khareed/thok qeemat, category, unit,
+  miyaad ki tareekh, barcode
+- **Chhupe hue search tags** — list me kabhi nazar nahi aate, sirf search inhe parhta hai
+- **Samajhdar search** — Roman Urdu, Urdu aur English, hijje ki galti ke saath bhi:
+  `chawal` / `chaawal` / `chawl` / `چاول` — chaaron se ek hi product milta hai
+- **Stock** — kilo, gram, litre, ml, adad, darjan, packet, bori.
+  `250 g` likhein to `0.25 kg` ban jata hai
+- **Stock history** — har tabdeeli ka record: kab, kitna, kis wajah se
+  (naya maal aaya / becha / kharab hua / ginti durust ki)
+- **Manganay ki list** — jo cheezein khatam ya kam hain, ek tap me supplier ko WhatsApp par
+- **Miyaad ke alerts** — 30 din ke andar khatam hone wali cheezein alag
+- **Dashboard** — kitne products, stock ki maliyat, kam stock, haalia sargarmi
+- **English + اردو** — poora RTL layout
 - **Dark mode**
+- **Har phone se** — apne email/password se kisi bhi device par login karein
 
-## Chalane ka tareeqa
+---
 
-```bash
-npm install
-npm run dev        # development
-npm run build      # production build → dist/
-npm run preview    # build ko locally chala kar dekhein
-```
+## Data kahan hai
 
-Phone par test karne ke liye `npm run dev -- --host` chalayein aur phone ke browser me
-network URL kholein, phir **"Add to Home Screen"**.
+Aap ke **apne Firebase project** me — Google ke server par, aap ke account ke neeche.
+Har user sirf apna data dekh sakta hai (dekhein [`firestore.rules`](firestore.rules)).
 
-## Data kahan rehta hai
+Firestore apni ek copy phone me bhi rakhta hai, is liye:
 
-Saara data aap ke **apne device ke IndexedDB me** hai. Koi server nahi, koi account nahi,
-kuch bhi kahin upload nahi hota.
+- Internet chala jaye to app chalti rehti hai
+- Jo tabdeeliyan aap karte hain wo mehfooz rehti hain aur internet aate hi khud sync ho jaati hain
+- Phone gum ho jaye to bhi data mehfooz hai — naye phone par login karein, sab wapas
 
-> **Ehtiyaat:** Phone gum ho jaye, ya browser ka data clear ho jaye, to data wapas nahi aata.
-> Isliye Settings → Backup se hafte me ek baar backup zaroor lein. App khud bhi 7 din baad
-> home screen par yaad dilati hai.
+Tasveerein bhi Firestore me hi rehti hain (compress ho kar ~60 KB), taake
+Firebase Storage ki zaroorat na pare — wo naye projects me credit card maangta hai.
 
-App pehli baar khulne par `navigator.storage.persist()` maangti hai, taake storage kam hone
-par browser ye data khud se delete na kare.
+---
 
 ## Structure
 
 ```
-src/
-  db/         Dexie schema, types, repo (saara data access), backup/restore
-  lib/        search (normalize + fuzzy), images (compress), units, format, router, theme
-  i18n/       Context + English/Urdu dictionaries
-  components/ ui primitives, ProductCard, TagInput, ImagePicker, StockAdjustSheet, BottomNav
-  screens/    Dashboard, Products, ProductForm, ProductDetail, Stock, Categories, Settings
+index.html              app ka waahid HTML page
+manifest.webmanifest    "Add to Home Screen" ke liye
+sw.js                   service worker — offline cache
+firestore.rules         database ki hifazat (Firebase me publish karni hai)
+css/app.css             saari styling
+assets/                 icons
+js/
+  config.js             ← YAHAN apni Firebase config daalein
+  firebase.js           Firebase init + login
+  store.js              saara database access sirf yahan se
+  app.js                routing aur screens jorne wala hissa
+  components.js         chhote reusable HTML tukde
+  i18n/                 English + Urdu
+  lib/                  search, units, format, images, router, theme, dom
+  screens/              login, dashboard, products, form, detail, stock, categories, settings
 ```
 
-Saara database access `src/db/repo.ts` se guzarta hai. Kal ko cloud sync ya multi-device
-chahiye ho to sirf wahi layer badalni paray gi — screens ko haath lagane ki zaroorat nahi.
+Firestore ko koi screen seedha nahi chhuti — sab kuch `js/store.js` se guzarta hai.
+Kal ko database badalna ho to sirf wahi ek file badlegi.
+
+---
+
+## Locally chalana
+
+Kyunki app ES modules istemaal karti hai, `index.html` ko seedha double-click se
+kholna kaam nahi karega. Koi bhi chhota server chalayein:
+
+```bash
+python3 -m http.server 5500
+# phir kholein: http://localhost:5500
+```
+
+`localhost` Firebase me pehle se authorized hota hai.
+
+---
 
 ## Stock kaise badalta hai
 
-Stock sirf `adjustStock()` / `setStockCount()` se badalta hai (`src/db/repo.ts`), aur dono
-product ka `stockQty` + `stockMovements` ka record **ek hi transaction** me likhte hain —
-is liye history kabhi asal stock se mismatch nahi hoti.
+Stock sirf **"Adjust stock"** se badalta hai — product edit form se nahi.
 
-Product edit form se stock nahi badla ja sakta; uske liye "Adjust stock" hai.
+Wajah: `adjustStock()` aur `setStockCount()` (dekhein `js/store.js`) product ka
+`stockQty` aur `movements` ka record **ek hi Firestore transaction** me likhte hain.
+Is liye history kabhi asal stock se mismatch nahi hoti, chahe do phone ek saath chal rahe hon.

@@ -1,0 +1,36 @@
+rules_version = '2';
+
+// =============================================================
+//  Karyana Shop — Firestore Security Rules
+//
+//  YE RULES LAGANA LAZMI HAI.
+//
+//  Firebase ka web config (apiKey wagera) chhupa nahi hota — website ke
+//  source me har kisi ko nazar aata hai. Aap ka data in rules se mehfooz
+//  hota hai, config chhupane se nahi.
+//
+//  Ye rules kehti hain: har shakhs sirf APNA shop data parh aur likh
+//  sakta hai (jahan document ka id us ke apne user id se milta ho).
+//
+//  Lagane ka tareeqa: Firebase Console → Firestore Database → Rules
+//  → sab kuch replace kar ke Publish dabayein.
+// =============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // shops/{uid} aur us ke andar ka sab kuch (products, categories, movements)
+    match /shops/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Baqi har cheez band.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
