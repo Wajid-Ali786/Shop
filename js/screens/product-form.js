@@ -1,4 +1,5 @@
-import { esc, escAttr, on, toast, confirmAction, $ } from '../lib/dom.js'
+import { esc, escAttr, on, toast, $ } from '../lib/dom.js'
+import { confirmModal, promptModal } from '../lib/modal.js'
 import { t, unitLabel, localizedName } from '../i18n/index.js'
 import { goBack, navigate } from '../lib/router.js'
 import {
@@ -499,9 +500,13 @@ export function renderProductForm(root, productId) {
     })
 
     on(root, 'click', '[data-new-cat]', async () => {
-      const name = window.prompt(t('categories.nameEn'))
-      if (!name || !name.trim()) return
       readInputs()
+      const name = await promptModal({
+        title: t('categories.add'),
+        label: t('categories.nameEn'),
+        confirmLabel: t('common.add'),
+      })
+      if (!name) return
 
       // Isi naam ki category pehle se ho to nayi banane ke bajaye wahi laga do —
       // dukandar ki murad bhi yehi hoti hai.
@@ -619,7 +624,13 @@ export function renderProductForm(root, productId) {
 
     // ---- delete ----
     on(root, 'click', '[data-delete]', async () => {
-      if (!confirmAction(t('form.deleteConfirm'))) return
+      const ok = await confirmModal({
+        title: t('common.delete'),
+        message: t('form.deleteConfirm'),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
+      if (!ok) return
       try {
         await deleteProduct(productId)
         toast(t('common.done'))

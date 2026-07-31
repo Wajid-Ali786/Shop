@@ -97,8 +97,3 @@ export function closeSheet() {
 function escToClose(e) {
   if (e.key === 'Escape') closeSheet()
 }
-
-/** window.confirm ka wrapper — baad me acha modal banana ho to ek hi jagah badlegi. */
-export function confirmAction(message) {
-  return window.confirm(message)
-}

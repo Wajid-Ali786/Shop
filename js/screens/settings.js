@@ -1,11 +1,12 @@
 import { esc, escAttr, on, toast, $ } from '../lib/dom.js'
 import { t, getLang, setLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, saveSetting, buildExport } from '../store.js'
+import { state, saveSetting, buildExport, restoreExport, isValidExport } from '../store.js'
 import { appBar, field, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
 import { currentEmail, signOut } from '../firebase.js'
 import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
+import { chooseModal, alertModal } from '../lib/modal.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -68,9 +69,14 @@ export function renderSettings(root, rerender) {
           t('settings.dataSection'),
           `<div class="card">
              <p class="small muted" style="margin-bottom:12px">${esc(t('settings.exportDesc'))}</p>
-             <button class="btn btn--secondary btn--full" data-export>
+             <button class="btn btn--secondary btn--full" data-export style="margin-bottom:10px">
                💾 ${esc(t('settings.export'))}
              </button>
+             <button class="btn btn--secondary btn--full" data-restore>
+               📂 ${esc(t('settings.restore'))}
+             </button>
+             <input type="file" accept="application/json,.json" id="restore-file" hidden>
+             <p class="small muted" style="margin-top:12px">${esc(t('settings.restoreDesc'))}</p>
            </div>`,
         )}
 
@@ -125,18 +131,81 @@ export function renderSettings(root, rerender) {
   bindSetting(root, '#s-lowStock', 'defaultLowStockAt', (v) => Number(v) || 0)
 
   // ---- export ----
-  on(root, 'click', '[data-export]', () => {
-    const blob = new Blob([JSON.stringify(buildExport(), null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    const stamp = new Date().toISOString().slice(0, 10)
-    a.download = `karyana-${stamp}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    toast(t('settings.exported'))
+  on(root, 'click', '[data-export]', async (_e, el) => {
+    el.disabled = true
+    try {
+      // Tasveerein aur poori movements server se aati hain, is liye await.
+      const data = await buildExport()
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const stamp = new Date().toISOString().slice(0, 10)
+      a.download = `karyana-${stamp}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      toast(t('settings.exported'))
+    } catch {
+      toast(t('error.generic'))
+    } finally {
+      el.disabled = false
+    }
+  })
+
+  // ---- restore ----
+  on(root, 'click', '[data-restore]', () => $('#restore-file', root)?.click())
+
+  $('#restore-file', root)?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    let data
+    try {
+      data = JSON.parse(await file.text())
+    } catch {
+      data = null
+    }
+    if (!isValidExport(data)) {
+      await alertModal({ title: t('settings.restore'), message: t('settings.restoreInvalid') })
+      return
+    }
+
+    // Replace se maujooda data mit jata hai — is liye pehle poochte hain.
+    const mode = await chooseModal({
+      title: t('settings.restore'),
+      message: t('settings.restoreMode', { products: data.products.length }),
+      options: [
+        {
+          value: 'merge',
+          label: t('settings.restoreMerge'),
+          description: t('settings.restoreMergeDesc'),
+        },
+        {
+          value: 'replace',
+          label: t('settings.restoreReplace'),
+          description: t('settings.restoreReplaceDesc'),
+          danger: true,
+        },
+      ],
+    })
+    if (!mode) return
+
+    toast(t('settings.restoring'))
+    try {
+      const result = await restoreExport(data, mode)
+      await alertModal({
+        title: t('settings.restore'),
+        message: t('settings.restored', {
+          products: result.products,
+          categories: result.categories,
+        }),
+      })
+    } catch {
+      toast(t('error.generic'))
+    }
   })
 
   // ---- account ----

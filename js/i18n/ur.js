@@ -196,6 +196,7 @@ export const ur = {
   'detail.expiredOn': 'میعاد ختم',
   'detail.daysLeft': '{days} دن باقی',
   'detail.notFound': 'پروڈکٹ نہیں ملی',
+  'detail.historyTrimmed': '{total} میں سے تازہ ترین {shown} دکھائی جا رہی ہیں',
 
   // stock
   'stock.title': 'اسٹاک',
@@ -242,6 +243,13 @@ export const ur = {
   'categories.restoreDefaults': 'ڈیفالٹ کیٹیگریز شامل کریں',
   'categories.duplicate': '“{name}” نام کی کیٹیگری پہلے سے موجود ہے',
   'categories.alreadyThere': '“{name}” پہلے سے موجود تھی — لگا دی گئی',
+  'categories.duplicatesTitle': 'دہرائی گئی کیٹیگریز',
+  'categories.duplicatesFound':
+    '{count} کیٹیگریز کا نام پہلے سے موجود نام جیسا ہے۔ آپ کے پروڈکٹس ان میں بٹے ہوئے ہیں۔',
+  'categories.duplicatesConfirm':
+    'انہیں ایک میں ملا دیں؟ پروڈکٹس ہر نام کی پہلی کیٹیگری میں چلے جائیں گے — کچھ ڈیلیٹ نہیں ہو گا۔ متاثرہ: {names}',
+  'categories.merge': 'ملا دیں',
+  'categories.merged': '{count} کیٹیگریز مل گئیں۔ {products} پروڈکٹس منتقل ہوئے۔',
 
   // settings
   'settings.title': 'سیٹنگز',
@@ -260,6 +268,17 @@ export const ur = {
   'settings.exportDesc':
     'تمام پروڈکٹس اور اسٹاک ایک فائل میں اس فون پر محفوظ کرتا ہے۔ آپ کا ڈیٹا فائربیس میں پہلے ہی محفوظ ہے — یہ صرف ایک اضافی کاپی ہے۔',
   'settings.exported': 'فائل محفوظ ہو گئی',
+  'settings.restore': 'فائل سے بحال کریں',
+  'settings.restoreDesc':
+    'بیک اپ فائل واپس آپ کی دکان میں لوڈ کرتا ہے۔ تصاویر اور اسٹاک ہسٹری بھی واپس آ جاتی ہیں۔',
+  'settings.restoreInvalid': 'یہ فائل کریانہ شاپ کا بیک اپ نہیں ہے',
+  'settings.restoreMode': 'اس فائل میں {products} پروڈکٹس ہیں۔ کیسے لوڈ کریں؟',
+  'settings.restoreMerge': 'موجودہ کے ساتھ شامل کریں',
+  'settings.restoreMergeDesc': 'آپ کے موجودہ پروڈکٹس رہیں گے اور فائل کا ڈیٹا اوپر شامل ہو گا',
+  'settings.restoreReplace': 'سب کچھ بدل دیں',
+  'settings.restoreReplaceDesc': 'پہلے موجودہ پروڈکٹس ڈیلیٹ ہوں گے، پھر فائل لوڈ ہو گی',
+  'settings.restoring': 'بحال ہو رہا ہے…',
+  'settings.restored': '{products} پروڈکٹس اور {categories} کیٹیگریز بحال ہو گئیں',
   'settings.about': 'ایپ کے بارے میں',
   'settings.aboutCloud':
     'آپ کا ڈیٹا آپ کے اپنے فائربیس پروجیکٹ میں محفوظ ہے، اس لیے آپ اپنے لاگ اِن سے کسی بھی فون سے یہ دکان کھول سکتے ہیں۔ ایپ انٹرنیٹ کے بغیر بھی چلتی ہے اور کنکشن آنے پر خود سیو کر دیتی ہے۔',

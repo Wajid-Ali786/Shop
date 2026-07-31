@@ -1,4 +1,5 @@
-import { esc, escAttr, on, toast, openSheet, closeSheet, confirmAction, $ } from '../lib/dom.js'
+import { esc, escAttr, on, toast, openSheet, closeSheet, $ } from '../lib/dom.js'
+import { confirmModal, alertModal } from '../lib/modal.js'
 import { t, localizedName } from '../i18n/index.js'
 import { goBack } from '../lib/router.js'
 import {
@@ -7,6 +8,8 @@ import {
   updateCategory,
   deleteCategory,
   seedDefaultCategories,
+  findDuplicateCategories,
+  mergeDuplicateCategories,
 } from '../store.js'
 import { appBar, field, icon, loading } from '../components.js'
 
@@ -37,6 +40,7 @@ export function renderCategories(root) {
       })}
 
       <div class="pad">
+        ${duplicateBanner()}
         ${
           state.categories.length === 0
             ? `<div class="empty">
@@ -66,6 +70,33 @@ export function renderCategories(root) {
 
   on(root, 'click', '[data-back]', () => goBack())
   on(root, 'click', '[data-new]', () => openEditor(null))
+
+  on(root, 'click', '[data-merge-dupes]', async (_e, el) => {
+    const dupes = findDuplicateCategories()
+    const ok = await confirmModal({
+      title: t('categories.duplicatesTitle'),
+      message: t('categories.duplicatesConfirm', {
+        names: dupes.map((d) => d.keep.nameEn).join(', '),
+      }),
+      confirmLabel: t('categories.merge'),
+    })
+    if (!ok) return
+
+    el.disabled = true
+    try {
+      const result = await mergeDuplicateCategories()
+      await alertModal({
+        title: t('categories.duplicatesTitle'),
+        message: t('categories.merged', {
+          count: result.merged,
+          products: result.products,
+        }),
+      })
+    } catch (err) {
+      el.disabled = false
+      toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
+    }
+  })
   on(root, 'click', '[data-edit]', (_e, el) => {
     openEditor(state.categories.find((c) => c.id === el.dataset.edit))
   })
@@ -81,7 +112,13 @@ export function renderCategories(root) {
   })
 
   on(root, 'click', '[data-del]', async (_e, el) => {
-    if (!confirmAction(t('categories.deleteConfirm'))) return
+    const ok = await confirmModal({
+      title: t('common.delete'),
+      message: t('categories.deleteConfirm'),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteCategory(el.dataset.del)
       toast(t('common.done'))
@@ -89,6 +126,27 @@ export function renderCategories(root) {
       toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
     }
   })
+}
+
+/**
+ * Duplicate check baad me laga tha, is liye purane data me ek jaise naam ki
+ * categories ho sakti hain. Milti hain to yahan safai ka rasta dikhate hain.
+ */
+function duplicateBanner() {
+  const dupes = findDuplicateCategories()
+  if (!dupes.length) return ''
+
+  const extras = dupes.reduce((n, d) => n + d.extras.length, 0)
+  return `
+    <div class="card card--warn" style="margin-bottom:16px">
+      <p class="bold" style="margin-bottom:4px">${esc(t('categories.duplicatesTitle'))}</p>
+      <p class="small" style="margin-bottom:12px">
+        ${esc(t('categories.duplicatesFound', { count: extras }))}
+      </p>
+      <button class="btn btn--primary btn--full btn--sm" data-merge-dupes>
+        ${esc(t('categories.merge'))}
+      </button>
+    </div>`
 }
 
 function openEditor(category) {

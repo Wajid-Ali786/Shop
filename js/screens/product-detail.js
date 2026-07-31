@@ -28,6 +28,7 @@ export function renderProductDetail(root, productId) {
   }
 
   let movements = null
+  let movementTotal = 0
 
   /**
    * Har product ki apni movements query.
@@ -38,8 +39,9 @@ export function renderProductDetail(root, productId) {
    */
   const unsubscribe = watchProductMovements(
     productId,
-    (rows) => {
+    (rows, total) => {
       movements = rows
+      movementTotal = total
       draw()
     },
     () => {
@@ -121,6 +123,13 @@ export function renderProductDetail(root, productId) {
                     .join('')}</ul>`
                 : empty('📋', t('detail.noHistory')),
           )}
+          ${
+            movements && movementTotal > movements.length
+              ? `<p class="tiny muted center" style="margin-top:-12px">
+                   ${esc(t('detail.historyTrimmed', { shown: movements.length, total: movementTotal }))}
+                 </p>`
+              : ''
+          }
         </div>
 
         <div class="savebar">

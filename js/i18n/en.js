@@ -196,6 +196,7 @@ export const en = {
   'detail.expiredOn': 'Expired',
   'detail.daysLeft': '{days} days left',
   'detail.notFound': 'Product not found',
+  'detail.historyTrimmed': 'Showing the latest {shown} of {total} entries',
 
   // stock
   'stock.title': 'Stock',
@@ -242,6 +243,13 @@ export const en = {
   'categories.restoreDefaults': 'Add default categories',
   'categories.duplicate': 'A category called “{name}” already exists',
   'categories.alreadyThere': '“{name}” already existed — ticked it for you',
+  'categories.duplicatesTitle': 'Repeated categories',
+  'categories.duplicatesFound':
+    '{count} categories repeat a name that already exists. Your products are split across them.',
+  'categories.duplicatesConfirm':
+    'Merge them into one? Products move to the first category of each name — nothing is deleted. Affected: {names}',
+  'categories.merge': 'Merge them',
+  'categories.merged': 'Merged {count} categories. {products} products moved.',
 
   // settings
   'settings.title': 'Settings',
@@ -260,6 +268,17 @@ export const en = {
   'settings.exportDesc':
     'Saves all products and stock into one file on this phone. Your data is already safe in Firebase — this is just an extra copy.',
   'settings.exported': 'File saved',
+  'settings.restore': 'Restore from a file',
+  'settings.restoreDesc':
+    'Loads a backup file back into your shop. Photos and stock history come back too.',
+  'settings.restoreInvalid': 'This file is not a Karyana Shop backup',
+  'settings.restoreMode': 'This file has {products} products. How should we load it?',
+  'settings.restoreMerge': 'Add to what I have',
+  'settings.restoreMergeDesc': 'Keeps your current products and adds the file on top',
+  'settings.restoreReplace': 'Replace everything',
+  'settings.restoreReplaceDesc': 'Deletes your current products first, then loads the file',
+  'settings.restoring': 'Restoring…',
+  'settings.restored': 'Restored {products} products and {categories} categories',
   'settings.about': 'About',
   'settings.aboutCloud':
     'Your data is saved in your own Firebase project, so you can open this shop from any phone with your login. The app also works without internet and syncs when the connection comes back.',

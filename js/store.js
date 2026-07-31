@@ -267,12 +267,76 @@ export async function createCategory(data) {
   return ref.id
 }
 
+/**
+ * Wo categories jo pehle se ek jaise naam par ban chuki hain.
+ *
+ * Duplicate check pehle nahi tha, is liye purane data me "Cold Drinks" aur
+ * "cold drinks" jaisi joriyan mojood ho sakti hain. Har jori ka pehla (sab se
+ * upar wala) `keep` hai, baqi `extras`.
+ */
+export function findDuplicateCategories() {
+  const groups = new Map()
+  for (const cat of state.categories) {
+    const key = categoryKey(cat.nameEn)
+    if (!key) continue
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(cat)
+  }
+
+  return [...groups.values()]
+    .filter((list) => list.length > 1)
+    .map((list) => ({ keep: list[0], extras: list.slice(1) }))
+}
+
+/**
+ * Duplicate categories ko ek me mila deta hai.
+ *
+ * Products delete NAHI hote — jo product zayad category me tha wo `keep` wali
+ * category me chala jata hai, phir zayad category hat jati hai.
+ */
+export async function mergeDuplicateCategories() {
+  const dupes = findDuplicateCategories()
+  if (!dupes.length) return { merged: 0, products: 0 }
+
+  // Har zayad id ke saamne wo id jo rehni hai.
+  const remap = new Map()
+  for (const { keep, extras } of dupes) {
+    for (const extra of extras) remap.set(extra.id, keep.id)
+  }
+
+  const ops = []
+  const touched = new Set()
+
+  for (const p of state.products) {
+    const ids = p.categoryIds || []
+    if (!ids.some((id) => remap.has(id))) continue
+
+    // Naye ids me duplicate na rahe.
+    const next = [...new Set(ids.map((id) => remap.get(id) ?? id))]
+    touched.add(p.id)
+    ops.push((batch) =>
+      batch.update(doc(col('products'), p.id), {
+        categoryIds: next,
+        searchBlob: buildSearchBlob(p, categoryNamesFor(next)),
+      }),
+    )
+  }
+
+  for (const extraId of remap.keys()) {
+    ops.push((batch) => batch.delete(doc(col('categories'), extraId)))
+  }
+
+  await commitInChunks(ops)
+  return { merged: remap.size, products: touched.size }
+}
+
 export async function updateCategory(id, changes) {
   if (changes.nameEn && findCategoryByName(changes.nameEn, id)) throw duplicateError()
 
   await updateDoc(doc(col('categories'), id), changes)
-  // Category ka naam products ke searchBlob ka hissa hai.
-  await rebuildSearchBlobs()
+  // Category ka naam products ke searchBlob ka hissa hai — lekin sirf usi
+  // category ke products ka.
+  await rebuildSearchBlobs(id)
 }
 
 /**
@@ -361,10 +425,21 @@ export async function deleteProduct(id) {
   await commitInChunks(ops)
 }
 
-/** Category ka naam badle to us ke products ka searchBlob refresh karna parta hai. */
-export async function rebuildSearchBlobs() {
-  if (!state.products.length) return
-  const ops = state.products.map((p) => (batch) =>
+/**
+ * Category ka naam badle to us ke products ka searchBlob refresh karna parta hai.
+ *
+ * `categoryId` diya ho to sirf USI category ke products dobara likhte hain.
+ * Pehle har rename par dukan ka HAR product dobara likha jata tha — 500
+ * products wali dukan me ek naam badalne par 500 writes, jabke asal me shayad
+ * 10 hi mutasir hote hain.
+ */
+export async function rebuildSearchBlobs(categoryId) {
+  const affected = categoryId
+    ? state.products.filter((p) => (p.categoryIds || []).includes(categoryId))
+    : state.products
+  if (!affected.length) return
+
+  const ops = affected.map((p) => (batch) =>
     batch.update(doc(col('products'), p.id), {
       searchBlob: buildSearchBlob(p, categoryNamesFor(p.categoryIds)),
     }),
@@ -381,58 +456,92 @@ export async function rebuildSearchBlobs() {
  * movement ka record usi transaction me banta hai — is liye history kabhi
  * asal stock se mismatch nahi hoti, chahe do device ek saath chal rahe hon.
  */
-export async function adjustStock({ productId, qty, type, reason, note }) {
-  const amount = Math.abs(round3(qty))
-  if (!amount) throw new Error('Quantity zero nahi ho sakti')
-
+/**
+ * Firestore ka transaction server se baat kiye bagair nahi chalta — internet
+ * na ho to wo latak jata hai. Dukan par internet jana aam baat hai, aur stock
+ * badalna app ka sab se zaroori kaam hai, is liye offline hone par batched
+ * write par gir jate hain: wo cache me likh kar internet aane par khud sync
+ * ho jati hai.
+ *
+ * Farq itna hai ke offline me naya stock LOCAL cache se ginaa jata hai, server
+ * se parh kar nahi. Ek hi dukan ke ek device par ye bilkul theek hai; do device
+ * ek saath offline chalein to ginti me farq aa sakta hai — is liye movement par
+ * `offline: true` likh dete hain taake baad me pata chal sake.
+ */
+async function writeStockChange({ productId, amount, type, reason, note, absolute }) {
   const productRef = doc(col('products'), productId)
   const movementRef = doc(col('movements'))
 
-  return runTransaction(dbf, async (tx) => {
-    const snap = await tx.get(productRef)
-    if (!snap.exists()) throw new Error('Product nahi mila')
-
-    const current = Number(snap.data().stockQty || 0)
-    const delta = type === 'in' ? amount : -amount
-    // Stock manfi nahi ho sakta — warna inventory value ka hisaab ulta ho jata hai.
-    const balanceAfter = round3(Math.max(0, current + delta))
-
-    tx.update(productRef, { stockQty: balanceAfter, updatedAt: serverTimestamp() })
-    tx.set(movementRef, {
-      productId,
-      type,
-      qty: amount,
-      reason,
-      note: note || null,
-      balanceAfter,
-      createdAt: serverTimestamp(),
-    })
-    return balanceAfter
+  const buildMovement = (balanceAfter, qty, offline) => ({
+    productId,
+    type,
+    qty,
+    reason,
+    note: note || null,
+    balanceAfter,
+    createdAt: serverTimestamp(),
+    ...(offline ? { offline: true } : {}),
   })
+
+  if (navigator.onLine) {
+    try {
+      return await runTransaction(dbf, async (tx) => {
+        const snap = await tx.get(productRef)
+        if (!snap.exists()) throw new Error('Product nahi mila')
+
+        const current = Number(snap.data().stockQty || 0)
+        const balanceAfter =
+          absolute !== undefined
+            ? round3(Math.max(0, absolute))
+            : // Stock manfi nahi ho sakta — warna inventory value ulti ho jati hai.
+              round3(Math.max(0, current + (type === 'in' ? amount : -amount)))
+        const qty = absolute !== undefined ? Math.abs(round3(balanceAfter - current)) : amount
+
+        tx.update(productRef, { stockQty: balanceAfter, updatedAt: serverTimestamp() })
+        tx.set(movementRef, buildMovement(balanceAfter, qty, false))
+        return balanceAfter
+      })
+    } catch (err) {
+      // Sirf network ki wajah se nakami par fallback; baqi ghaltiyan aage bhejo.
+      if (err?.code === 'permission-denied' || err?.message === 'Product nahi mila') throw err
+    }
+  }
+
+  // ---- offline raasta ----
+  const local = productById(productId)
+  if (!local) throw new Error('Product nahi mila')
+
+  const current = Number(local.stockQty || 0)
+  const balanceAfter =
+    absolute !== undefined
+      ? round3(Math.max(0, absolute))
+      : round3(Math.max(0, current + (type === 'in' ? amount : -amount)))
+  const qty = absolute !== undefined ? Math.abs(round3(balanceAfter - current)) : amount
+
+  const batch = writeBatch(dbf)
+  batch.update(productRef, { stockQty: balanceAfter, updatedAt: serverTimestamp() })
+  batch.set(movementRef, buildMovement(balanceAfter, qty, true))
+  // Offline me commit ka promise internet aane tak pura nahi hota — is liye
+  // us ka intezar nahi karte, cache me likhai foran ho chuki hoti hai.
+  batch.commit().catch(() => {})
+
+  return balanceAfter
+}
+
+export async function adjustStock({ productId, qty, type, reason, note }) {
+  const amount = Math.abs(round3(qty))
+  if (!amount) throw new Error('Quantity zero nahi ho sakti')
+  return writeStockChange({ productId, amount, type, reason, note })
 }
 
 /** Ginti kar ke stock theek karna — "abhi asal me itna para hai". */
 export async function setStockCount(productId, countedQty, note) {
-  const target = round3(Math.max(0, countedQty))
-  const productRef = doc(col('products'), productId)
-  const movementRef = doc(col('movements'))
-
-  return runTransaction(dbf, async (tx) => {
-    const snap = await tx.get(productRef)
-    if (!snap.exists()) throw new Error('Product nahi mila')
-
-    const current = Number(snap.data().stockQty || 0)
-    tx.update(productRef, { stockQty: target, updatedAt: serverTimestamp() })
-    tx.set(movementRef, {
-      productId,
-      type: 'adjust',
-      qty: Math.abs(round3(target - current)),
-      reason: 'correction',
-      note: note || null,
-      balanceAfter: target,
-      createdAt: serverTimestamp(),
-    })
-    return target
+  return writeStockChange({
+    productId,
+    type: 'adjust',
+    reason: 'correction',
+    note,
+    absolute: round3(Math.max(0, countedQty)),
   })
 }
 
@@ -448,13 +557,17 @@ export async function setStockCount(productId, countedQty, note) {
  * orderBy Firestore me composite index maangta hai, aur wo user ko console me
  * khud banana parta. Tarteeb yahan JS me laga lete hain.
  */
+export const PRODUCT_HISTORY_LIMIT = 200
+
 export function watchProductMovements(productId, callback, onError) {
   return onSnapshot(
     query(col('movements'), where('productId', '==', productId)),
     (snap) => {
       const rows = snap.docs.map(withId)
       rows.sort((a, b) => b.createdAt - a.createdAt)
-      callback(rows)
+      // Saalon baad ek product ki hazaaron movements ho sakti hain; screen par
+      // itni dikhana na mumkin hai na kaam ka. Data poora mehfooz rehta hai.
+      callback(rows.slice(0, PRODUCT_HISTORY_LIMIT), rows.length)
     },
     onError,
   )
@@ -538,16 +651,121 @@ export async function seedDefaultCategories() {
 
 // ------------------------------------------------------------------ export
 
-/** Data ki ek local copy — Firebase pehle se mehfooz hai, ye bas tasalli ke liye. */
-export function buildExport() {
+/**
+ * Data ki mukammal local copy.
+ *
+ * Tasveerein ab alag collection me hain, is liye unhe alag se mangwana parta
+ * hai — warna backup file me products to hote lekin tasveerein gum ho jatin.
+ * Movements bhi seedha server se, kyunki `state.movements` sirf aakhri 100
+ * rakhta hai.
+ */
+export async function buildExport() {
+  const [movementSnap, imageSnap] = await Promise.all([
+    getDocs(col('movements')),
+    getDocs(col('images')),
+  ])
+
   return {
     app: 'karyana-shop',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
     categories: state.categories,
     products: state.products,
-    movements: state.movements,
+    movements: movementSnap.docs.map(withId),
+    images: imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })),
+  }
+}
+
+export function isValidExport(value) {
+  return (
+    value &&
+    typeof value === 'object' &&
+    value.app === 'karyana-shop' &&
+    Array.isArray(value.products) &&
+    Array.isArray(value.categories)
+  )
+}
+
+/**
+ * Backup file wapas load karna.
+ *
+ * `replace` — pehle sab kuch mita kar file ka data daalo (IDs wahi rehti hain).
+ * `merge`   — maujooda data rakho aur file ka data NAYI ids ke saath daalo,
+ *             taake ek jaisi id wala record kisi ka data na mita de.
+ *
+ * Export honay ke bagair restore ka koi matlab nahi tha — file to ban jati thi
+ * lekin usay wapas daalne ka koi raasta hi nahi tha.
+ */
+export async function restoreExport(data, mode = 'merge') {
+  if (!isValidExport(data)) throw new Error('invalid-backup')
+
+  const strip = (o) => {
+    const { id: _id, ...rest } = o
+    void _id
+    return cleanUndefined(rest)
+  }
+
+  if (mode === 'replace') {
+    const existing = await Promise.all([
+      getDocs(col('products')),
+      getDocs(col('categories')),
+      getDocs(col('movements')),
+      getDocs(col('images')),
+    ])
+    await commitInChunks(
+      existing.flatMap((snap) => snap.docs.map((d) => (batch) => batch.delete(d.ref))),
+    )
+
+    const ops = []
+    for (const c of data.categories) ops.push((b) => b.set(doc(col('categories'), c.id), strip(c)))
+    for (const p of data.products) ops.push((b) => b.set(doc(col('products'), p.id), strip(p)))
+    for (const m of data.movements || []) ops.push((b) => b.set(doc(col('movements'), m.id), strip(m)))
+    for (const img of data.images || []) {
+      ops.push((b) => b.set(doc(col('images'), img.id), { data: img.data }))
+    }
+    await commitInChunks(ops)
+  } else {
+    // Nayi ids banti hain, is liye purani → nayi ka naqsha rakhna parta hai.
+    const catMap = new Map()
+    const imgMap = new Map()
+    const prodMap = new Map()
+
+    const ops = []
+    for (const c of data.categories) {
+      const ref = doc(col('categories'))
+      catMap.set(c.id, ref.id)
+      ops.push((b) => b.set(ref, strip(c)))
+    }
+    for (const img of data.images || []) {
+      const ref = doc(col('images'))
+      imgMap.set(img.id, ref.id)
+      ops.push((b) => b.set(ref, { data: img.data }))
+    }
+    for (const p of data.products) {
+      const ref = doc(col('products'))
+      prodMap.set(p.id, ref.id)
+      ops.push((b) =>
+        b.set(ref, {
+          ...strip(p),
+          categoryIds: (p.categoryIds || []).map((id) => catMap.get(id)).filter(Boolean),
+          imageId: p.imageId ? (imgMap.get(p.imageId) ?? null) : null,
+        }),
+      )
+    }
+    for (const m of data.movements || []) {
+      const newProductId = prodMap.get(m.productId)
+      if (!newProductId) continue
+      ops.push((b) => b.set(doc(col('movements')), { ...strip(m), productId: newProductId }))
+    }
+    await commitInChunks(ops)
+  }
+
+  return {
+    products: data.products.length,
+    categories: data.categories.length,
+    movements: (data.movements || []).length,
+    images: (data.images || []).length,
   }
 }
 
