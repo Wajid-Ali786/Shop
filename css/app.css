@@ -555,6 +555,32 @@ input[type='checkbox'] {
   color: var(--brand-text);
 }
 
+/* --------------------------------------------------------- status pick */
+
+/* Teen haalatein har ek ki tafseel ke saath — sirf naam se farq samajh nahi
+   aata ke "chhupi hui" aur "ab nahi milti" me kya fark hai. */
+.statuspick {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.statuspick--on {
+  background: var(--brand-light);
+  border-color: var(--brand);
+}
+.statuspick--on .bold {
+  color: var(--brand-text);
+}
+
 /* ----------------------------------------------------- category picker */
 
 /* Ek product kai categories me ho sakta hai, is liye checkbox list. */

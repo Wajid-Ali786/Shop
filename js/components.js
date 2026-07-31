@@ -137,7 +137,7 @@ export function productCard(product, { categoryIcon, currency }) {
         <div style="min-width:0;flex:1">
           <div class="row" style="gap:6px">
             <p class="bold truncate">${esc(localizedName(product))}</p>
-            ${product.isActive === false ? `<span class="badge badge--hidden">${esc(t('products.inactive'))}</span>` : ''}
+            ${statusBadge(product)}
           </div>
           <p class="small muted truncate">
             ${product.brand ? esc(product.brand) : ''}
@@ -163,6 +163,17 @@ export function productCard(product, { categoryIcon, currency }) {
  * Badge par tap karne se poora sheet khulta hai jahan miqdaar, wajah aur
  * note likh sakte hain.
  */
+/** Chhupi hui ya market se khatam — dono par nishani. */
+export function statusBadge(product) {
+  if (product.status === 'discontinued') {
+    return `<span class="badge badge--out">${esc(t('products.discontinued'))}</span>`
+  }
+  if (product.status === 'hidden') {
+    return `<span class="badge badge--hidden">${esc(t('products.inactive'))}</span>`
+  }
+  return ''
+}
+
 export function quickStock(product) {
   const out = (product.stockQty || 0) <= 0
   // Buttons badge ke NEECHE — saath rakhne se product ka naam kat jata tha.

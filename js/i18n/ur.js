@@ -130,6 +130,9 @@ export const ur = {
   'products.sortPrice': 'قیمت',
   'products.sortNewest': 'نئی',
   'products.inactive': 'چھپی ہوئی',
+  'products.discontinued': 'اب نہیں ملتی',
+  'products.showArchived': 'چھپی ہوئی اور بند شدہ دکھائیں ({count})',
+  'products.hideArchived': 'دوبارہ چھپا دیں',
   'products.viewList': 'لسٹ ویو',
   'products.viewGrid': 'گرڈ ویو',
 
@@ -175,7 +178,14 @@ export const ur = {
   'form.takePhoto': 'کیمرہ',
   'form.choosePhoto': 'گیلری',
   'form.removePhoto': 'تصویر ہٹائیں',
-  'form.isActive': 'پروڈکٹ لسٹ میں دکھائیں',
+  'form.status': 'دستیابی',
+  'form.statusActive': 'فروخت میں',
+  'form.statusActiveHint': 'لسٹ میں آتی ہے، اسٹاک کم ہو تو اطلاع ملتی ہے',
+  'form.statusHidden': 'فی الحال چھپی ہوئی',
+  'form.statusHiddenHint': 'سیزن سے باہر۔ ڈیٹا محفوظ رہتا ہے، لسٹ اور اطلاعات سے باہر',
+  'form.statusDiscontinued': 'اب نہیں ملتی',
+  'form.statusDiscontinuedHint':
+    'مارکیٹ سے ختم — دوبارہ نہیں مل سکتی۔ منگوانے کی لسٹ میں کبھی نہیں آئے گی',
   'form.moreOptions': 'مزید تفصیل',
   'form.lessOptions': 'کم تفصیل',
   'form.nameRequired': 'پروڈکٹ کا نام ضروری ہے',
@@ -219,6 +229,9 @@ export const ur = {
   'stock.addOne': 'ایک شامل کریں',
   'stock.removeOne': 'ایک کم کریں',
   'stock.historyEmpty': 'ابھی کوئی اسٹاک سرگرمی نہیں',
+  'stock.deadStockTitle': 'اب نہیں ملتی — مگر اسٹاک میں پڑی ہے',
+  'stock.deadStockHint':
+    'یہ دوبارہ نہیں منگوائی جا سکتیں۔ جو پڑا ہے نکال دیں — پیسہ اسی میں پھنسا ہے۔',
 
   // reasons
   'reason.purchase': 'نیا مال آیا',

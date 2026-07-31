@@ -191,6 +191,9 @@ function normalizeProduct(p) {
     packSize: p.packSize ?? null,
     packUnit: p.packUnit ?? null,
     tags: p.tags || [],
+    // Teen haalatein: normal, waqti tor par chhupi hui, ya market se khatam.
+    // Purane records me sirf `isActive` tha — false ka matlab "chhupi hui".
+    status: p.status || (p.isActive === false ? 'hidden' : 'active'),
     // categoryId (ek) → categoryIds (kai). Dono me se jo mile.
     categoryIds: Array.isArray(p.categoryIds)
       ? p.categoryIds

@@ -130,6 +130,9 @@ export const en = {
   'products.sortPrice': 'Price',
   'products.sortNewest': 'Newest',
   'products.inactive': 'Hidden',
+  'products.discontinued': 'No longer available',
+  'products.showArchived': 'Show hidden and discontinued ({count})',
+  'products.hideArchived': 'Hide them again',
   'products.viewList': 'List view',
   'products.viewGrid': 'Grid view',
 
@@ -175,7 +178,14 @@ export const en = {
   'form.takePhoto': 'Camera',
   'form.choosePhoto': 'Gallery',
   'form.removePhoto': 'Remove photo',
-  'form.isActive': 'Show in product list',
+  'form.status': 'Availability',
+  'form.statusActive': 'On sale',
+  'form.statusActiveHint': 'Shows in the list, alerts you when stock runs low',
+  'form.statusHidden': 'Hidden for now',
+  'form.statusHiddenHint': 'Off-season. Kept safely, out of the list and out of alerts',
+  'form.statusDiscontinued': 'No longer available',
+  'form.statusDiscontinuedHint':
+    'Finished in the market — you cannot get it again. Never appears in the reorder list',
   'form.moreOptions': 'More details',
   'form.lessOptions': 'Fewer details',
   'form.nameRequired': 'Product name is required',
@@ -219,6 +229,9 @@ export const en = {
   'stock.addOne': 'Add one',
   'stock.removeOne': 'Remove one',
   'stock.historyEmpty': 'No stock activity yet',
+  'stock.deadStockTitle': 'No longer available — still on the shelf',
+  'stock.deadStockHint':
+    'You cannot restock these. Clear out what is left; the money is sitting in them.',
 
   // reasons
   'reason.purchase': 'New stock arrived',
