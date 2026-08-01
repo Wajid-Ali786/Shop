@@ -15,10 +15,17 @@ let activeTab = 'alerts'
 
 /** Alerts ki grouping — Dashboard bhi yehi function istemaal karta hai. */
 export function groupStockAlerts(products) {
-  const groups = { out: [], low: [], expiring: [], expired: [] }
+  const groups = { out: [], low: [], expiring: [], expired: [], deadStock: [] }
 
   for (const p of products) {
-    if (p.isActive === false) continue
+    // Jo cheez market se hi khatam ho chuki hai us ki "manga lein" wali
+    // itlaa bekar hai — mangwai hi nahi ja sakti. Haan, jo maal para hai wo
+    // alag se dikhana chahiye taake nikaal diya jaye.
+    if (p.status === 'discontinued') {
+      if ((p.stockQty || 0) > 0) groups.deadStock.push(p)
+      continue
+    }
+    if (p.status === 'hidden') continue
 
     const level = stockLevel(p)
     if (level === 'out') groups.out.push(p)
@@ -72,7 +79,12 @@ export function renderStock(root, rerender) {
 }
 
 function alertsTab(groups, reorder) {
-  if (!reorder.length && !groups.expiring.length && !groups.expired.length) {
+  if (
+    !reorder.length &&
+    !groups.expiring.length &&
+    !groups.expired.length &&
+    !groups.deadStock.length
+  ) {
     return empty('✅', t('stock.lowStockEmpty'))
   }
 
@@ -100,6 +112,15 @@ function alertsTab(groups, reorder) {
           ? section(
               t('stock.expiringTitle'),
               `<ul class="plist">${groups.expiring.map((p) => alertRow(p, 'warn')).join('')}</ul>`,
+            )
+          : ''
+      }
+      ${
+        groups.deadStock.length
+          ? section(
+              t('stock.deadStockTitle'),
+              `<p class="small muted" style="margin:-4px 0 8px">${esc(t('stock.deadStockHint'))}</p>
+               <ul class="plist">${groups.deadStock.map((p) => alertRow(p, 'warn')).join('')}</ul>`,
             )
           : ''
       }

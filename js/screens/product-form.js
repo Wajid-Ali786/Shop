@@ -1,4 +1,5 @@
-import { esc, escAttr, on, toast, confirmAction, $ } from '../lib/dom.js'
+import { esc, escAttr, on, toast, $ } from '../lib/dom.js'
+import { confirmModal, promptModal } from '../lib/modal.js'
 import { t, unitLabel, localizedName } from '../i18n/index.js'
 import { goBack, navigate } from '../lib/router.js'
 import {
@@ -53,7 +54,7 @@ function emptyForm() {
     tags: [],
     barcode: '',
     expiryDate: '',
-    isActive: true,
+    status: 'active',
     imageId: null,
     imageData: '', // preview ke liye; save par hi upload hota hai
   }
@@ -79,7 +80,7 @@ export function renderProductForm(root, productId) {
   let showMore = isEdit
     ? Boolean(
         existing.brand || existing.wholesalePrice || existing.barcode ||
-        existing.expiryDate || existing.nameUr || existing.isActive === false,
+        existing.expiryDate || existing.nameUr || existing.status !== 'active',
       )
     : false
   let errors = {}
@@ -414,10 +415,23 @@ export function renderProductForm(root, productId) {
           `<input id="f-expiryDate" type="date" value="${escAttr(form.expiryDate)}" dir="ltr">`,
         )}
 
-        <label class="checkbox-row">
-          <input type="checkbox" id="f-isActive" ${form.isActive ? 'checked' : ''}>
-          <span class="small bold">${esc(t('form.isActive'))}</span>
-        </label>
+        <span class="field__label">${esc(t('form.status'))}</span>
+        <div class="choices" style="grid-template-columns:1fr">
+          ${[
+            ['active', t('form.statusActive'), t('form.statusActiveHint')],
+            ['hidden', t('form.statusHidden'), t('form.statusHiddenHint')],
+            ['discontinued', t('form.statusDiscontinued'), t('form.statusDiscontinuedHint')],
+          ]
+            .map(
+              ([value, label, hint]) => `
+              <button type="button" class="statuspick${form.status === value ? ' statuspick--on' : ''}"
+                data-status="${value}">
+                <span class="bold">${esc(label)}</span>
+                <span class="tiny muted">${esc(hint)}</span>
+              </button>`,
+            )
+            .join('')}
+        </div>
       </div>`
   }
 
@@ -452,8 +466,7 @@ export function renderProductForm(root, productId) {
       set('wholesalePrice', 'f-wholesalePrice')
       set('barcode', 'f-barcode')
       set('expiryDate', 'f-expiryDate')
-      const active = $('#f-isActive', root)
-      if (active) form.isActive = active.checked
+
     }
   }
 
@@ -467,6 +480,12 @@ export function renderProductForm(root, productId) {
     on(root, 'click', '[data-toggle-more]', () => {
       readInputs()
       showMore = !showMore
+      draw()
+    })
+
+    on(root, 'click', '[data-status]', (_e, el) => {
+      readInputs()
+      form.status = el.dataset.status
       draw()
     })
 
@@ -499,9 +518,13 @@ export function renderProductForm(root, productId) {
     })
 
     on(root, 'click', '[data-new-cat]', async () => {
-      const name = window.prompt(t('categories.nameEn'))
-      if (!name || !name.trim()) return
       readInputs()
+      const name = await promptModal({
+        title: t('categories.add'),
+        label: t('categories.nameEn'),
+        confirmLabel: t('common.add'),
+      })
+      if (!name) return
 
       // Isi naam ki category pehle se ho to nayi banane ke bajaye wahi laga do —
       // dukandar ki murad bhi yehi hoti hai.
@@ -619,7 +642,13 @@ export function renderProductForm(root, productId) {
 
     // ---- delete ----
     on(root, 'click', '[data-delete]', async () => {
-      if (!confirmAction(t('form.deleteConfirm'))) return
+      const ok = await confirmModal({
+        title: t('common.delete'),
+        message: t('form.deleteConfirm'),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
+      if (!ok) return
       try {
         await deleteProduct(productId)
         toast(t('common.done'))
@@ -687,7 +716,8 @@ export function renderProductForm(root, productId) {
         tags: form.tags,
         barcode: form.barcode.trim() || null,
         expiryDate: form.expiryDate || null,
-        isActive: form.isActive,
+        status: form.status,
+        isActive: form.status === 'active', // purane record padhne walon ke liye
         imageId,
         image: null, // purani inline tasveer hata dete hain
       }
@@ -744,7 +774,7 @@ function toForm(p) {
     tags: [...(p.tags || [])],
     barcode: p.barcode || '',
     expiryDate: p.expiryDate || '',
-    isActive: p.isActive !== false,
+    status: p.status || (p.isActive === false ? 'hidden' : 'active'),
     imageId: p.imageId || null,
     imageData: '',
   }

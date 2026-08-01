@@ -8,7 +8,7 @@ import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
-const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView() }
+const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showArchived: false }
 
 /** List ya grid — dukandar ka chuna hua view yaad rehta hai. */
 function loadView() {
@@ -71,6 +71,7 @@ export function renderProducts(root, rerender) {
       </div>
 
       ${listOrEmpty(visible)}
+      ${archivedToggle()}
     </div>
 
     <button class="fab" data-add aria-label="${escAttr(t('home.quickAdd'))}">+</button>`
@@ -88,8 +89,20 @@ function filterProducts() {
   }
 
   if (ui.query.trim()) {
-    // Search apni relevance ke hisaab se tarteeb deta hai — usay dobara sort na karein.
+    // Search HAR cheez me chalti hai — chhupi hui aur market se khatam bhi.
+    // Grahak wo cheez maang sakta hai jis ka stock abhi dukan me para hai;
+    // us waqt "nahi mila" dikhana sab se bura jawab hai. Badge bata deta hai
+    // ke maal dobara nahi aayega.
+    // Search apni relevance ke hisaab se tarteeb deta hai — dobara sort na karein.
     return searchProducts(list, ui.query)
+  }
+
+  // Browse karte waqt rozana ki list saaf rehni chahiye: chhupi hui aur
+  // khatam-shuda cheezein tab tak nahi aatin jab tak maanga na jaye.
+  // (Pehle "Show in product list" ka toggle asal me kuch karta hi nahi tha —
+  // product list me aa jata tha, bas badge lag jata tha.)
+  if (!ui.showArchived) {
+    list = list.filter((p) => (p.status || 'active') === 'active')
   }
 
   const sorted = [...list]
@@ -98,6 +111,23 @@ function filterProducts() {
   else if (ui.sort === 'newest') sorted.sort((a, b) => b.createdAt - a.createdAt)
   else sorted.sort((a, b) => localizedName(a).localeCompare(localizedName(b)))
   return sorted
+}
+
+/** Chhupi/khatam products kitni hain — aur unhe dikhane ka rasta. */
+function archivedToggle() {
+  const archived = state.products.filter((p) => (p.status || 'active') !== 'active')
+  if (!archived.length) return ''
+
+  return `
+    <div class="pad" style="padding-top:0">
+      <button class="btn btn--secondary btn--full btn--sm" data-toggle-archived>
+        ${
+          ui.showArchived
+            ? esc(t('products.hideArchived'))
+            : esc(t('products.showArchived', { count: archived.length }))
+        }
+      </button>
+    </div>`
 }
 
 function categoryChips() {
@@ -182,6 +212,11 @@ function wire(root, rerender) {
 
   on(root, 'click', '[data-view]', (_e, el) => {
     saveView(el.dataset.view)
+    rerender()
+  })
+
+  on(root, 'click', '[data-toggle-archived]', () => {
+    ui.showArchived = !ui.showArchived
     rerender()
   })
 

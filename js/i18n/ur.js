@@ -1,6 +1,7 @@
 export const ur = {
   // nav
   'nav.home': 'ہوم',
+  'nav.sale': 'بکری',
   'nav.products': 'پروڈکٹس',
   'nav.stock': 'اسٹاک',
   'nav.settings': 'سیٹنگز',
@@ -99,6 +100,30 @@ export const ur = {
   'account.errWrongCurrentPassword': 'موجودہ پاس ورڈ غلط ہے',
   'account.errEmailTaken': 'یہ ای میل کسی اور اکاؤنٹ میں استعمال ہو رہا ہے',
 
+  // bikri (sale)
+  'sale.title': 'نئی بکری',
+  'sale.new': 'بکری شروع کریں',
+  'sale.searchPlaceholder': 'پروڈکٹ تلاش کر کے شامل کریں…',
+  'sale.emptyTitle': 'ابھی کچھ شامل نہیں',
+  'sale.emptyBody': 'اوپر تلاش کریں اور پروڈکٹ پر ٹیپ کر کے بل میں ڈالیں۔',
+  'sale.total': 'کل',
+  'sale.complete': 'پیسے لیں',
+  'sale.clear': 'بل صاف کریں',
+  'sale.moreThanStock': 'موجودہ ({stock}) سے زیادہ — پھر بھی بیچ رہے ہیں',
+  'sale.receipt': 'پرچی',
+  'sale.profitLine': 'منافع {amount}',
+
+  'sales.title': 'آج کا حساب',
+  'sales.today': 'آج',
+  'sales.earlier': 'پہلے کی',
+  'sales.todayTotal': 'آج کی بکری',
+  'sales.todayProfit': 'آج کا منافع',
+  'sales.todayCount': '{count} بکریاں',
+  'sales.itemCount': '{count} چیزیں',
+  'sales.viewAll': 'سب دیکھیں',
+  'sales.emptyToday': 'آج ابھی کوئی بکری نہیں',
+  'sales.emptyTodayHint': 'ہر بکری یہاں نظر آئے گی۔',
+
   // offline banner
   'net.offline': 'آف لائن — انٹرنیٹ آنے پر تبدیلیاں خودکار سیو ہو جائیں گی',
 
@@ -130,6 +155,9 @@ export const ur = {
   'products.sortPrice': 'قیمت',
   'products.sortNewest': 'نئی',
   'products.inactive': 'چھپی ہوئی',
+  'products.discontinued': 'اب نہیں ملتی',
+  'products.showArchived': 'چھپی ہوئی اور بند شدہ دکھائیں ({count})',
+  'products.hideArchived': 'دوبارہ چھپا دیں',
   'products.viewList': 'لسٹ ویو',
   'products.viewGrid': 'گرڈ ویو',
 
@@ -175,7 +203,14 @@ export const ur = {
   'form.takePhoto': 'کیمرہ',
   'form.choosePhoto': 'گیلری',
   'form.removePhoto': 'تصویر ہٹائیں',
-  'form.isActive': 'پروڈکٹ لسٹ میں دکھائیں',
+  'form.status': 'دستیابی',
+  'form.statusActive': 'فروخت میں',
+  'form.statusActiveHint': 'لسٹ میں آتی ہے، اسٹاک کم ہو تو اطلاع ملتی ہے',
+  'form.statusHidden': 'فی الحال چھپی ہوئی',
+  'form.statusHiddenHint': 'سیزن سے باہر۔ ڈیٹا محفوظ رہتا ہے، لسٹ اور اطلاعات سے باہر',
+  'form.statusDiscontinued': 'اب نہیں ملتی',
+  'form.statusDiscontinuedHint':
+    'مارکیٹ سے ختم — دوبارہ نہیں مل سکتی۔ منگوانے کی لسٹ میں کبھی نہیں آئے گی',
   'form.moreOptions': 'مزید تفصیل',
   'form.lessOptions': 'کم تفصیل',
   'form.nameRequired': 'پروڈکٹ کا نام ضروری ہے',
@@ -196,6 +231,7 @@ export const ur = {
   'detail.expiredOn': 'میعاد ختم',
   'detail.daysLeft': '{days} دن باقی',
   'detail.notFound': 'پروڈکٹ نہیں ملی',
+  'detail.historyTrimmed': '{total} میں سے تازہ ترین {shown} دکھائی جا رہی ہیں',
 
   // stock
   'stock.title': 'اسٹاک',
@@ -218,6 +254,9 @@ export const ur = {
   'stock.addOne': 'ایک شامل کریں',
   'stock.removeOne': 'ایک کم کریں',
   'stock.historyEmpty': 'ابھی کوئی اسٹاک سرگرمی نہیں',
+  'stock.deadStockTitle': 'اب نہیں ملتی — مگر اسٹاک میں پڑی ہے',
+  'stock.deadStockHint':
+    'یہ دوبارہ نہیں منگوائی جا سکتیں۔ جو پڑا ہے نکال دیں — پیسہ اسی میں پھنسا ہے۔',
 
   // reasons
   'reason.purchase': 'نیا مال آیا',
@@ -242,6 +281,13 @@ export const ur = {
   'categories.restoreDefaults': 'ڈیفالٹ کیٹیگریز شامل کریں',
   'categories.duplicate': '“{name}” نام کی کیٹیگری پہلے سے موجود ہے',
   'categories.alreadyThere': '“{name}” پہلے سے موجود تھی — لگا دی گئی',
+  'categories.duplicatesTitle': 'دہرائی گئی کیٹیگریز',
+  'categories.duplicatesFound':
+    '{count} کیٹیگریز کا نام پہلے سے موجود نام جیسا ہے۔ آپ کے پروڈکٹس ان میں بٹے ہوئے ہیں۔',
+  'categories.duplicatesConfirm':
+    'انہیں ایک میں ملا دیں؟ پروڈکٹس ہر نام کی پہلی کیٹیگری میں چلے جائیں گے — کچھ ڈیلیٹ نہیں ہو گا۔ متاثرہ: {names}',
+  'categories.merge': 'ملا دیں',
+  'categories.merged': '{count} کیٹیگریز مل گئیں۔ {products} پروڈکٹس منتقل ہوئے۔',
 
   // settings
   'settings.title': 'سیٹنگز',
@@ -260,6 +306,17 @@ export const ur = {
   'settings.exportDesc':
     'تمام پروڈکٹس اور اسٹاک ایک فائل میں اس فون پر محفوظ کرتا ہے۔ آپ کا ڈیٹا فائربیس میں پہلے ہی محفوظ ہے — یہ صرف ایک اضافی کاپی ہے۔',
   'settings.exported': 'فائل محفوظ ہو گئی',
+  'settings.restore': 'فائل سے بحال کریں',
+  'settings.restoreDesc':
+    'بیک اپ فائل واپس آپ کی دکان میں لوڈ کرتا ہے۔ تصاویر اور اسٹاک ہسٹری بھی واپس آ جاتی ہیں۔',
+  'settings.restoreInvalid': 'یہ فائل کریانہ شاپ کا بیک اپ نہیں ہے',
+  'settings.restoreMode': 'اس فائل میں {products} پروڈکٹس ہیں۔ کیسے لوڈ کریں؟',
+  'settings.restoreMerge': 'موجودہ کے ساتھ شامل کریں',
+  'settings.restoreMergeDesc': 'آپ کے موجودہ پروڈکٹس رہیں گے اور فائل کا ڈیٹا اوپر شامل ہو گا',
+  'settings.restoreReplace': 'سب کچھ بدل دیں',
+  'settings.restoreReplaceDesc': 'پہلے موجودہ پروڈکٹس ڈیلیٹ ہوں گے، پھر فائل لوڈ ہو گی',
+  'settings.restoring': 'بحال ہو رہا ہے…',
+  'settings.restored': '{products} پروڈکٹس اور {categories} کیٹیگریز بحال ہو گئیں',
   'settings.about': 'ایپ کے بارے میں',
   'settings.aboutCloud':
     'آپ کا ڈیٹا آپ کے اپنے فائربیس پروجیکٹ میں محفوظ ہے، اس لیے آپ اپنے لاگ اِن سے کسی بھی فون سے یہ دکان کھول سکتے ہیں۔ ایپ انٹرنیٹ کے بغیر بھی چلتی ہے اور کنکشن آنے پر خود سیو کر دیتی ہے۔',

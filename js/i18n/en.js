@@ -1,6 +1,7 @@
 export const en = {
   // nav
   'nav.home': 'Home',
+  'nav.sale': 'Sale',
   'nav.products': 'Products',
   'nav.stock': 'Stock',
   'nav.settings': 'Settings',
@@ -99,6 +100,30 @@ export const en = {
   'account.errWrongCurrentPassword': 'Current password is wrong',
   'account.errEmailTaken': 'Another account already uses that email',
 
+  // bikri (sale)
+  'sale.title': 'New sale',
+  'sale.new': 'Start a sale',
+  'sale.searchPlaceholder': 'Search a product to add…',
+  'sale.emptyTitle': 'Nothing added yet',
+  'sale.emptyBody': 'Search above and tap a product to put it in the bill.',
+  'sale.total': 'Total',
+  'sale.complete': 'Take payment',
+  'sale.clear': 'Clear the bill',
+  'sale.moreThanStock': 'More than you have ({stock}) — selling anyway',
+  'sale.receipt': 'Receipt',
+  'sale.profitLine': 'Profit {amount}',
+
+  'sales.title': "Today's takings",
+  'sales.today': 'Today',
+  'sales.earlier': 'Earlier',
+  'sales.todayTotal': "Today's sales",
+  'sales.todayProfit': "Today's profit",
+  'sales.todayCount': '{count} sales',
+  'sales.itemCount': '{count} items',
+  'sales.viewAll': 'See all',
+  'sales.emptyToday': 'No sales yet today',
+  'sales.emptyTodayHint': 'Every sale you take will appear here.',
+
   // offline banner
   'net.offline': 'Offline — changes will sync when internet returns',
 
@@ -130,6 +155,9 @@ export const en = {
   'products.sortPrice': 'Price',
   'products.sortNewest': 'Newest',
   'products.inactive': 'Hidden',
+  'products.discontinued': 'No longer available',
+  'products.showArchived': 'Show hidden and discontinued ({count})',
+  'products.hideArchived': 'Hide them again',
   'products.viewList': 'List view',
   'products.viewGrid': 'Grid view',
 
@@ -175,7 +203,14 @@ export const en = {
   'form.takePhoto': 'Camera',
   'form.choosePhoto': 'Gallery',
   'form.removePhoto': 'Remove photo',
-  'form.isActive': 'Show in product list',
+  'form.status': 'Availability',
+  'form.statusActive': 'On sale',
+  'form.statusActiveHint': 'Shows in the list, alerts you when stock runs low',
+  'form.statusHidden': 'Hidden for now',
+  'form.statusHiddenHint': 'Off-season. Kept safely, out of the list and out of alerts',
+  'form.statusDiscontinued': 'No longer available',
+  'form.statusDiscontinuedHint':
+    'Finished in the market — you cannot get it again. Never appears in the reorder list',
   'form.moreOptions': 'More details',
   'form.lessOptions': 'Fewer details',
   'form.nameRequired': 'Product name is required',
@@ -196,6 +231,7 @@ export const en = {
   'detail.expiredOn': 'Expired',
   'detail.daysLeft': '{days} days left',
   'detail.notFound': 'Product not found',
+  'detail.historyTrimmed': 'Showing the latest {shown} of {total} entries',
 
   // stock
   'stock.title': 'Stock',
@@ -218,6 +254,9 @@ export const en = {
   'stock.addOne': 'Add one',
   'stock.removeOne': 'Remove one',
   'stock.historyEmpty': 'No stock activity yet',
+  'stock.deadStockTitle': 'No longer available — still on the shelf',
+  'stock.deadStockHint':
+    'You cannot restock these. Clear out what is left; the money is sitting in them.',
 
   // reasons
   'reason.purchase': 'New stock arrived',
@@ -242,6 +281,13 @@ export const en = {
   'categories.restoreDefaults': 'Add default categories',
   'categories.duplicate': 'A category called “{name}” already exists',
   'categories.alreadyThere': '“{name}” already existed — ticked it for you',
+  'categories.duplicatesTitle': 'Repeated categories',
+  'categories.duplicatesFound':
+    '{count} categories repeat a name that already exists. Your products are split across them.',
+  'categories.duplicatesConfirm':
+    'Merge them into one? Products move to the first category of each name — nothing is deleted. Affected: {names}',
+  'categories.merge': 'Merge them',
+  'categories.merged': 'Merged {count} categories. {products} products moved.',
 
   // settings
   'settings.title': 'Settings',
@@ -260,6 +306,17 @@ export const en = {
   'settings.exportDesc':
     'Saves all products and stock into one file on this phone. Your data is already safe in Firebase — this is just an extra copy.',
   'settings.exported': 'File saved',
+  'settings.restore': 'Restore from a file',
+  'settings.restoreDesc':
+    'Loads a backup file back into your shop. Photos and stock history come back too.',
+  'settings.restoreInvalid': 'This file is not a Karyana Shop backup',
+  'settings.restoreMode': 'This file has {products} products. How should we load it?',
+  'settings.restoreMerge': 'Add to what I have',
+  'settings.restoreMergeDesc': 'Keeps your current products and adds the file on top',
+  'settings.restoreReplace': 'Replace everything',
+  'settings.restoreReplaceDesc': 'Deletes your current products first, then loads the file',
+  'settings.restoring': 'Restoring…',
+  'settings.restored': 'Restored {products} products and {categories} categories',
   'settings.about': 'About',
   'settings.aboutCloud':
     'Your data is saved in your own Firebase project, so you can open this shop from any phone with your login. The app also works without internet and syncs when the connection comes back.',
