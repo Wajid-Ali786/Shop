@@ -38,6 +38,7 @@ export const state = {
   products: [],
   categories: [],
   movements: [],
+  sales: [],
   settings: { ...defaultSettings() },
   ready: false,
   error: null,
@@ -134,6 +135,14 @@ export function startSync() {
       onError,
     ),
     onSnapshot(
+      query(col('sales'), orderBy('createdAt', 'desc'), limit(100)),
+      (snap) => {
+        state.sales = snap.docs.map(withId)
+        emit()
+      },
+      onError,
+    ),
+    onSnapshot(
       shopRef(),
       (snap) => {
         state.settings = { ...defaultSettings(), ...(snap.data() || {}) }
@@ -157,6 +166,7 @@ export function stopSync() {
   state.products = []
   state.categories = []
   state.movements = []
+  state.sales = []
   state.settings = defaultSettings()
   state.ready = false
   state.error = null
@@ -618,6 +628,109 @@ export async function deleteImage(imageId) {
   }
 }
 
+// ------------------------------------------------------------------ sales
+
+/**
+ * Ek bikri ka record.
+ *
+ * Har line me product ka NAAM, QEEMAT aur KHAREED RATE us waqt ka mehfooz kar
+ * liya jata hai. Kal ko rate badle, naam badle, ya product delete ho jaye —
+ * purani parchi wahi rakam dikhati rahegi jo us din li gayi thi. Warna purana
+ * hisaab khud ba khud badalta rehta, jo sab se bura hai.
+ *
+ *   shops/{uid}/sales/{id}
+ *     items: [{ productId, name, unit, qty, price, cost, total }]
+ *     total, cost, profit, createdAt
+ */
+export async function recordSale(lines) {
+  const items = lines
+    .filter((l) => Number(l.qty) > 0)
+    .map((l) => {
+      const price = Number(l.price) || 0
+      const qty = round3(l.qty)
+      return {
+        productId: l.productId,
+        name: l.name,
+        unit: l.unit || null,
+        sellBy: l.sellBy || null,
+        packLabel: l.packLabel || null,
+        qty,
+        price,
+        cost: Number(l.cost) || 0,
+        total: round3(price * qty),
+      }
+    })
+
+  if (!items.length) throw new Error('Bikri khali nahi ho sakti')
+
+  const total = round3(items.reduce((sum, i) => sum + i.total, 0))
+  const cost = round3(items.reduce((sum, i) => sum + i.cost * i.qty, 0))
+  const saleRef = doc(col('sales'))
+  const batch = writeBatch(dbf)
+
+  batch.set(saleRef, {
+    items,
+    total,
+    cost,
+    profit: round3(total - cost),
+    createdAt: serverTimestamp(),
+  })
+
+  // Stock aur movements USI batch me. Bikri record ho jaye lekin stock na
+  // ghate (ya us ka ulta) — dono soortein hisaab kharab kar deti hain.
+  for (const item of items) {
+    const product = productById(item.productId)
+    if (!product) continue
+
+    const balanceAfter = round3(Math.max(0, (product.stockQty || 0) - item.qty))
+    batch.update(doc(col('products'), item.productId), {
+      stockQty: balanceAfter,
+      updatedAt: serverTimestamp(),
+    })
+    batch.set(doc(col('movements')), {
+      productId: item.productId,
+      type: 'out',
+      qty: item.qty,
+      reason: 'sale',
+      // Movement se wapas parchi tak pahunchne ka rasta.
+      saleId: saleRef.id,
+      balanceAfter,
+      createdAt: serverTimestamp(),
+    })
+  }
+
+  // Offline me commit ka promise internet aane tak pura nahi hota — cache me
+  // likhai foran ho chuki hoti hai, is liye us ka intezar nahi karte.
+  const commit = batch.commit()
+  if (navigator.onLine) await commit
+  else commit.catch(() => {})
+
+  return { id: saleRef.id, items, total, cost, profit: round3(total - cost) }
+}
+
+/** Aaj ki aadhi raat — "aaj ka hisaab" yahin se shuru hota hai. */
+export function startOfToday() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+/** Aaj kitni bikri hui, kitna munafa. */
+export function todayTotals() {
+  const since = startOfToday()
+  const today = state.sales.filter((s) => s.createdAt >= since)
+  return {
+    count: today.length,
+    total: round3(today.reduce((sum, s) => sum + (s.total || 0), 0)),
+    profit: round3(today.reduce((sum, s) => sum + (s.profit || 0), 0)),
+    sales: today,
+  }
+}
+
+export function saleById(id) {
+  return state.sales.find((s) => s.id === id)
+}
+
 // ---------------------------------------------------------------- settings
 
 export async function saveSetting(key, value) {
@@ -663,20 +776,22 @@ export async function seedDefaultCategories() {
  * rakhta hai.
  */
 export async function buildExport() {
-  const [movementSnap, imageSnap] = await Promise.all([
+  const [movementSnap, imageSnap, saleSnap] = await Promise.all([
     getDocs(col('movements')),
     getDocs(col('images')),
+    getDocs(col('sales')),
   ])
 
   return {
     app: 'karyana-shop',
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
     categories: state.categories,
     products: state.products,
     movements: movementSnap.docs.map(withId),
     images: imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })),
+    sales: saleSnap.docs.map(withId),
   }
 }
 
@@ -715,6 +830,7 @@ export async function restoreExport(data, mode = 'merge') {
       getDocs(col('categories')),
       getDocs(col('movements')),
       getDocs(col('images')),
+      getDocs(col('sales')),
     ])
     await commitInChunks(
       existing.flatMap((snap) => snap.docs.map((d) => (batch) => batch.delete(d.ref))),
@@ -726,6 +842,9 @@ export async function restoreExport(data, mode = 'merge') {
     for (const m of data.movements || []) ops.push((b) => b.set(doc(col('movements'), m.id), strip(m)))
     for (const img of data.images || []) {
       ops.push((b) => b.set(doc(col('images'), img.id), { data: img.data }))
+    }
+    for (const sale of data.sales || []) {
+      ops.push((b) => b.set(doc(col('sales'), sale.id), strip(sale)))
     }
     await commitInChunks(ops)
   } else {
@@ -760,6 +879,19 @@ export async function restoreExport(data, mode = 'merge') {
       const newProductId = prodMap.get(m.productId)
       if (!newProductId) continue
       ops.push((b) => b.set(doc(col('movements')), { ...strip(m), productId: newProductId }))
+    }
+    // Parchi ki lines me naam aur qeemat pehle se mehfooz hain, is liye
+    // productId na mile to bhi purana hisaab poora rehta hai.
+    for (const sale of data.sales || []) {
+      ops.push((b) =>
+        b.set(doc(col('sales')), {
+          ...strip(sale),
+          items: (sale.items || []).map((i) => ({
+            ...i,
+            productId: prodMap.get(i.productId) ?? i.productId,
+          })),
+        }),
+      )
     }
     await commitInChunks(ops)
   }

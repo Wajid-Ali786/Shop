@@ -22,6 +22,7 @@ export const ICONS = {
     '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" stroke-linecap="round" stroke-linejoin="round"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/>',
   plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
+  sale: '<path d="M5 3h14v18l-2.3-1.6L14.4 21l-2.4-1.6L9.6 21l-2.3-1.6L5 21V3zm3.5 5h7m-7 4h7" stroke-linecap="round" stroke-linejoin="round"/>',
   viewList:
     '<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>',
   viewGrid:
@@ -286,6 +287,7 @@ export function movementRow(movement, product, productName = '') {
 
 const TABS = [
   { path: '/', key: 'nav.home', icon: 'home' },
+  { path: '/sale', key: 'nav.sale', icon: 'sale' },
   { path: '/products', key: 'nav.products', icon: 'products' },
   { path: '/stock', key: 'nav.stock', icon: 'stock' },
   { path: '/settings', key: 'nav.settings', icon: 'settings' },

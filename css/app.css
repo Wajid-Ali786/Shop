@@ -132,6 +132,10 @@ h3 {
 .screen--form {
   padding-bottom: 110px; /* fixed save bar ke liye */
 }
+/* Savebar + bottom nav dono. */
+.screen--sale {
+  padding-bottom: 180px;
+}
 
 .pad {
   padding: 16px;
@@ -333,6 +337,14 @@ h3 {
 .savebar > * {
   max-width: 520px;
   margin-inline: auto;
+}
+
+/* Jin screens par bottom nav BHI hoti hai (jaise bikri), wahan savebar ko
+   nav ke upar uthana parta hai — warna nav checkout button ko dhaanp leti
+   hai aur dabaya hi nahi ja sakta. */
+.savebar--above-nav {
+  bottom: calc(58px + max(env(safe-area-inset-bottom), 4px));
+  padding-bottom: 12px;
 }
 
 .fab {
@@ -1165,6 +1177,150 @@ input[type='checkbox'] {
   to {
     opacity: 1;
   }
+}
+
+/* ----------------------------------------------------------------- sale */
+
+/* Counter par cheez dhoondne wali list — bare tap targets, kyunki grahak
+   saamne khara hota hai. */
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.picker:active {
+  background: var(--brand-light);
+  border-color: var(--brand);
+}
+.picker__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+.picker__meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.picker__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--brand-light);
+  color: var(--brand-text);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.cartline {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.cartline__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cartline__head > .bold {
+  flex: 1;
+  min-width: 0;
+}
+.cartline__x {
+  width: 32px;
+  height: 32px;
+  font-size: 0.9rem;
+}
+.cartline__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cartline__qty {
+  width: 58px;
+  padding: 8px 4px;
+  text-align: center;
+  font-weight: 700;
+}
+.cartline__price {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.cartline__rate {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+}
+.cartline__total {
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+/* Checkout button par rakam — dukandar ko dabane se pehle nazar aani chahiye. */
+.sale__total {
+  margin-inline-start: auto;
+  font-size: 1.15rem;
+}
+.savebar .btn--primary {
+  justify-content: space-between;
+}
+
+.today {
+  background: linear-gradient(135deg, var(--brand-light), var(--surface));
+  border-color: var(--brand);
+}
+
+/* -------------------------------------------------------------- receipt */
+
+.receipt {
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.receipt__lines {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+.receipt__line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 10px;
+}
+.receipt__line > .tiny {
+  grid-column: 1;
+}
+.receipt__line > .bold {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+}
+.receipt__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
 }
 
 /* ---------------------------------------------------------------- modal */

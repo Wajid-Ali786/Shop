@@ -1,6 +1,7 @@
 export const en = {
   // nav
   'nav.home': 'Home',
+  'nav.sale': 'Sale',
   'nav.products': 'Products',
   'nav.stock': 'Stock',
   'nav.settings': 'Settings',
@@ -98,6 +99,30 @@ export const en = {
   'account.errSameEmail': 'That is already your email',
   'account.errWrongCurrentPassword': 'Current password is wrong',
   'account.errEmailTaken': 'Another account already uses that email',
+
+  // bikri (sale)
+  'sale.title': 'New sale',
+  'sale.new': 'Start a sale',
+  'sale.searchPlaceholder': 'Search a product to add…',
+  'sale.emptyTitle': 'Nothing added yet',
+  'sale.emptyBody': 'Search above and tap a product to put it in the bill.',
+  'sale.total': 'Total',
+  'sale.complete': 'Take payment',
+  'sale.clear': 'Clear the bill',
+  'sale.moreThanStock': 'More than you have ({stock}) — selling anyway',
+  'sale.receipt': 'Receipt',
+  'sale.profitLine': 'Profit {amount}',
+
+  'sales.title': "Today's takings",
+  'sales.today': 'Today',
+  'sales.earlier': 'Earlier',
+  'sales.todayTotal': "Today's sales",
+  'sales.todayProfit': "Today's profit",
+  'sales.todayCount': '{count} sales',
+  'sales.itemCount': '{count} items',
+  'sales.viewAll': 'See all',
+  'sales.emptyToday': 'No sales yet today',
+  'sales.emptyTodayHint': 'Every sale you take will appear here.',
 
   // offline banner
   'net.offline': 'Offline — changes will sync when internet returns',

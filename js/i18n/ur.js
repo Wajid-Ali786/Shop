@@ -1,6 +1,7 @@
 export const ur = {
   // nav
   'nav.home': 'ہوم',
+  'nav.sale': 'بکری',
   'nav.products': 'پروڈکٹس',
   'nav.stock': 'اسٹاک',
   'nav.settings': 'سیٹنگز',
@@ -98,6 +99,30 @@ export const ur = {
   'account.errSameEmail': 'یہ تو پہلے ہی آپ کا ای میل ہے',
   'account.errWrongCurrentPassword': 'موجودہ پاس ورڈ غلط ہے',
   'account.errEmailTaken': 'یہ ای میل کسی اور اکاؤنٹ میں استعمال ہو رہا ہے',
+
+  // bikri (sale)
+  'sale.title': 'نئی بکری',
+  'sale.new': 'بکری شروع کریں',
+  'sale.searchPlaceholder': 'پروڈکٹ تلاش کر کے شامل کریں…',
+  'sale.emptyTitle': 'ابھی کچھ شامل نہیں',
+  'sale.emptyBody': 'اوپر تلاش کریں اور پروڈکٹ پر ٹیپ کر کے بل میں ڈالیں۔',
+  'sale.total': 'کل',
+  'sale.complete': 'پیسے لیں',
+  'sale.clear': 'بل صاف کریں',
+  'sale.moreThanStock': 'موجودہ ({stock}) سے زیادہ — پھر بھی بیچ رہے ہیں',
+  'sale.receipt': 'پرچی',
+  'sale.profitLine': 'منافع {amount}',
+
+  'sales.title': 'آج کا حساب',
+  'sales.today': 'آج',
+  'sales.earlier': 'پہلے کی',
+  'sales.todayTotal': 'آج کی بکری',
+  'sales.todayProfit': 'آج کا منافع',
+  'sales.todayCount': '{count} بکریاں',
+  'sales.itemCount': '{count} چیزیں',
+  'sales.viewAll': 'سب دیکھیں',
+  'sales.emptyToday': 'آج ابھی کوئی بکری نہیں',
+  'sales.emptyTodayHint': 'ہر بکری یہاں نظر آئے گی۔',
 
   // offline banner
   'net.offline': 'آف لائن — انٹرنیٹ آنے پر تبدیلیاں خودکار سیو ہو جائیں گی',
