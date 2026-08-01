@@ -127,19 +127,26 @@ export function renderCategories(root) {
     })
     if (!keepId) return
 
+    const ids = chosen.map((c) => c.id)
+
+    // Milane se PEHLE is halat se nikal jate hain. Firestore likhai local
+    // cache par foran laagu kar deta hai, is liye screen commit ka intezar
+    // kiye baghair dobara ban jati hai — baad me nikalte to wo dobari
+    // banawat purani halat par ho jati aur nishan lage hi reh jate.
+    exitMergeMode()
     el.disabled = true
+
     try {
-      const result = await mergeCategories(
-        keepId,
-        chosen.map((c) => c.id),
-      )
-      exitMergeMode()
+      const result = await mergeCategories(keepId, ids)
       await alertModal({
         title: t('categories.mergeKeepTitle'),
         message: t('categories.mergeDone', { products: result.products }),
       })
     } catch (err) {
-      el.disabled = false
+      // Nakami par chunaav wapas de dete hain, warna sab dobara chunna parta.
+      mergeMode = true
+      picked = new Set(ids)
+      renderCategories(root)
       toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
     }
   })
