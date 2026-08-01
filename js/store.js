@@ -38,7 +38,6 @@ export const state = {
   products: [],
   categories: [],
   movements: [],
-  sales: [],
   settings: { ...defaultSettings() },
   ready: false,
   error: null,
@@ -135,14 +134,6 @@ export function startSync() {
       onError,
     ),
     onSnapshot(
-      query(col('sales'), orderBy('createdAt', 'desc'), limit(100)),
-      (snap) => {
-        state.sales = snap.docs.map(withId)
-        emit()
-      },
-      onError,
-    ),
-    onSnapshot(
       shopRef(),
       (snap) => {
         state.settings = { ...defaultSettings(), ...(snap.data() || {}) }
@@ -166,7 +157,6 @@ export function stopSync() {
   state.products = []
   state.categories = []
   state.movements = []
-  state.sales = []
   state.settings = defaultSettings()
   state.ready = false
   state.error = null
@@ -253,11 +243,30 @@ function categoryKey(name) {
     .replace(/\s+/g, ' ')
 }
 
-/** Isi naam ki category pehle se hai? (`exceptId` khud ko chhorne ke liye.) */
-export function findCategoryByName(name, exceptId) {
-  const key = categoryKey(name)
-  if (!key) return undefined
-  return state.categories.find((c) => c.id !== exceptId && categoryKey(c.nameEn) === key)
+/**
+ * Ek category ke DONO naam — English aur Urdu.
+ *
+ * Pehle sirf English naam dekha jata tha. Us se "Milk" aur "Doodh" alag mante
+ * the, halanke dono ka Urdu naam "دودھ" hai — Urdu me app khol kar dekhein to
+ * do bilkul ek jaisi rows nazar aati thin aur unhein hataya bhi nahi ja sakta
+ * tha, kyunki app unhein duplicate ginti hi nahi thi.
+ */
+function categoryKeys(cat) {
+  return [categoryKey(cat?.nameEn), categoryKey(cat?.nameUr)].filter(Boolean)
+}
+
+/**
+ * Isi naam ki category pehle se hai? Kisi bhi naam ka mel duplicate hai.
+ * (`exceptId` khud ko chhorne ke liye.)
+ */
+export function findCategoryByName(data, exceptId) {
+  // Purani call-sites sirf English naam bhejti thin.
+  const cat = typeof data === 'string' ? { nameEn: data } : data
+  const keys = new Set(categoryKeys(cat))
+  if (!keys.size) return undefined
+  return state.categories.find(
+    (c) => c.id !== exceptId && categoryKeys(c).some((k) => keys.has(k)),
+  )
 }
 
 function duplicateError() {
@@ -267,7 +276,7 @@ function duplicateError() {
 }
 
 export async function createCategory(data) {
-  if (findCategoryByName(data.nameEn)) throw duplicateError()
+  if (findCategoryByName(data)) throw duplicateError()
 
   const sortOrder = (state.categories.length + 1) * 10
   const ref = await addDoc(col('categories'), {
@@ -288,34 +297,64 @@ export async function createCategory(data) {
  * upar wala) `keep` hai, baqi `extras`.
  */
 export function findDuplicateCategories() {
-  const groups = new Map()
+  // Ek category ka English naam ek se mil sakta hai aur Urdu naam doosri se
+  // — is liye seedhi grouping kaafi nahi. Har naam ko ek "bucket" ka pata
+  // dete hain, aur jahan do bucket takra jayein wahan unhein jor dete hain.
+  const bucketOf = new Map() // key -> bucket index
+  const buckets = [] // bucket index -> categories
+
   for (const cat of state.categories) {
-    const key = categoryKey(cat.nameEn)
-    if (!key) continue
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(cat)
+    const keys = categoryKeys(cat)
+    if (!keys.length) continue
+
+    const hit = keys.map((k) => bucketOf.get(k)).find((b) => b !== undefined)
+    if (hit === undefined) {
+      buckets.push([cat])
+      for (const k of keys) bucketOf.set(k, buckets.length - 1)
+      continue
+    }
+
+    buckets[hit].push(cat)
+    // Is category ke baqi naam bhi usi bucket ki taraf ishara karein, warna
+    // teesri category jo sirf Urdu naam se milti hai wo chhoot jayegi.
+    for (const k of keys) if (!bucketOf.has(k)) bucketOf.set(k, hit)
   }
 
-  return [...groups.values()]
+  return buckets
     .filter((list) => list.length > 1)
     .map((list) => ({ keep: list[0], extras: list.slice(1) }))
 }
 
+/** App ne jo joriyan khud pakri hain, un sab ko ek saath mila deta hai. */
+export async function mergeDuplicateCategories() {
+  // Har zayad id ke saamne wo id jo rehni hai.
+  const remap = new Map()
+  for (const { keep, extras } of findDuplicateCategories()) {
+    for (const extra of extras) remap.set(extra.id, keep.id)
+  }
+  return applyCategoryMerge(remap)
+}
+
 /**
- * Duplicate categories ko ek me mila deta hai.
+ * Chuni hui categories ko ek me mila deta hai.
  *
+ * App sirf wo joriyan khud pakarti hai jin ke naam mil jate hain. Asal dukan
+ * me duplicate aksar mukhtalif naam se banti hai — "Cold Drink" aur "Cold
+ * Drinks", ya "Soap" aur "Sabun". Un ke liye dukandar khud chunta hai ke
+ * kaun si rehni hai.
+ */
+export async function mergeCategories(keepId, extraIds) {
+  const remap = new Map()
+  for (const id of extraIds) if (id !== keepId) remap.set(id, keepId)
+  return applyCategoryMerge(remap)
+}
+
+/**
  * Products delete NAHI hote — jo product zayad category me tha wo `keep` wali
  * category me chala jata hai, phir zayad category hat jati hai.
  */
-export async function mergeDuplicateCategories() {
-  const dupes = findDuplicateCategories()
-  if (!dupes.length) return { merged: 0, products: 0 }
-
-  // Har zayad id ke saamne wo id jo rehni hai.
-  const remap = new Map()
-  for (const { keep, extras } of dupes) {
-    for (const extra of extras) remap.set(extra.id, keep.id)
-  }
+async function applyCategoryMerge(remap) {
+  if (!remap.size) return { merged: 0, products: 0 }
 
   const ops = []
   const touched = new Set()
@@ -344,7 +383,7 @@ export async function mergeDuplicateCategories() {
 }
 
 export async function updateCategory(id, changes) {
-  if (changes.nameEn && findCategoryByName(changes.nameEn, id)) throw duplicateError()
+  if ((changes.nameEn || changes.nameUr) && findCategoryByName(changes, id)) throw duplicateError()
 
   await updateDoc(doc(col('categories'), id), changes)
   // Category ka naam products ke searchBlob ka hissa hai — lekin sirf usi
@@ -628,109 +667,6 @@ export async function deleteImage(imageId) {
   }
 }
 
-// ------------------------------------------------------------------ sales
-
-/**
- * Ek bikri ka record.
- *
- * Har line me product ka NAAM, QEEMAT aur KHAREED RATE us waqt ka mehfooz kar
- * liya jata hai. Kal ko rate badle, naam badle, ya product delete ho jaye —
- * purani parchi wahi rakam dikhati rahegi jo us din li gayi thi. Warna purana
- * hisaab khud ba khud badalta rehta, jo sab se bura hai.
- *
- *   shops/{uid}/sales/{id}
- *     items: [{ productId, name, unit, qty, price, cost, total }]
- *     total, cost, profit, createdAt
- */
-export async function recordSale(lines) {
-  const items = lines
-    .filter((l) => Number(l.qty) > 0)
-    .map((l) => {
-      const price = Number(l.price) || 0
-      const qty = round3(l.qty)
-      return {
-        productId: l.productId,
-        name: l.name,
-        unit: l.unit || null,
-        sellBy: l.sellBy || null,
-        packLabel: l.packLabel || null,
-        qty,
-        price,
-        cost: Number(l.cost) || 0,
-        total: round3(price * qty),
-      }
-    })
-
-  if (!items.length) throw new Error('Bikri khali nahi ho sakti')
-
-  const total = round3(items.reduce((sum, i) => sum + i.total, 0))
-  const cost = round3(items.reduce((sum, i) => sum + i.cost * i.qty, 0))
-  const saleRef = doc(col('sales'))
-  const batch = writeBatch(dbf)
-
-  batch.set(saleRef, {
-    items,
-    total,
-    cost,
-    profit: round3(total - cost),
-    createdAt: serverTimestamp(),
-  })
-
-  // Stock aur movements USI batch me. Bikri record ho jaye lekin stock na
-  // ghate (ya us ka ulta) — dono soortein hisaab kharab kar deti hain.
-  for (const item of items) {
-    const product = productById(item.productId)
-    if (!product) continue
-
-    const balanceAfter = round3(Math.max(0, (product.stockQty || 0) - item.qty))
-    batch.update(doc(col('products'), item.productId), {
-      stockQty: balanceAfter,
-      updatedAt: serverTimestamp(),
-    })
-    batch.set(doc(col('movements')), {
-      productId: item.productId,
-      type: 'out',
-      qty: item.qty,
-      reason: 'sale',
-      // Movement se wapas parchi tak pahunchne ka rasta.
-      saleId: saleRef.id,
-      balanceAfter,
-      createdAt: serverTimestamp(),
-    })
-  }
-
-  // Offline me commit ka promise internet aane tak pura nahi hota — cache me
-  // likhai foran ho chuki hoti hai, is liye us ka intezar nahi karte.
-  const commit = batch.commit()
-  if (navigator.onLine) await commit
-  else commit.catch(() => {})
-
-  return { id: saleRef.id, items, total, cost, profit: round3(total - cost) }
-}
-
-/** Aaj ki aadhi raat — "aaj ka hisaab" yahin se shuru hota hai. */
-export function startOfToday() {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.getTime()
-}
-
-/** Aaj kitni bikri hui, kitna munafa. */
-export function todayTotals() {
-  const since = startOfToday()
-  const today = state.sales.filter((s) => s.createdAt >= since)
-  return {
-    count: today.length,
-    total: round3(today.reduce((sum, s) => sum + (s.total || 0), 0)),
-    profit: round3(today.reduce((sum, s) => sum + (s.profit || 0), 0)),
-    sales: today,
-  }
-}
-
-export function saleById(id) {
-  return state.sales.find((s) => s.id === id)
-}
-
 // ---------------------------------------------------------------- settings
 
 export async function saveSetting(key, value) {
@@ -776,22 +712,20 @@ export async function seedDefaultCategories() {
  * rakhta hai.
  */
 export async function buildExport() {
-  const [movementSnap, imageSnap, saleSnap] = await Promise.all([
+  const [movementSnap, imageSnap] = await Promise.all([
     getDocs(col('movements')),
     getDocs(col('images')),
-    getDocs(col('sales')),
   ])
 
   return {
     app: 'karyana-shop',
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
     categories: state.categories,
     products: state.products,
     movements: movementSnap.docs.map(withId),
     images: imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })),
-    sales: saleSnap.docs.map(withId),
   }
 }
 
@@ -830,6 +764,8 @@ export async function restoreExport(data, mode = 'merge') {
       getDocs(col('categories')),
       getDocs(col('movements')),
       getDocs(col('images')),
+      // Bikri wala hissa nikal diya gaya hai; purane data me `sales` bache ho
+      // sakte hain, aur "replace" ka matlab hai poori safai.
       getDocs(col('sales')),
     ])
     await commitInChunks(
@@ -842,9 +778,6 @@ export async function restoreExport(data, mode = 'merge') {
     for (const m of data.movements || []) ops.push((b) => b.set(doc(col('movements'), m.id), strip(m)))
     for (const img of data.images || []) {
       ops.push((b) => b.set(doc(col('images'), img.id), { data: img.data }))
-    }
-    for (const sale of data.sales || []) {
-      ops.push((b) => b.set(doc(col('sales'), sale.id), strip(sale)))
     }
     await commitInChunks(ops)
   } else {
@@ -879,19 +812,6 @@ export async function restoreExport(data, mode = 'merge') {
       const newProductId = prodMap.get(m.productId)
       if (!newProductId) continue
       ops.push((b) => b.set(doc(col('movements')), { ...strip(m), productId: newProductId }))
-    }
-    // Parchi ki lines me naam aur qeemat pehle se mehfooz hain, is liye
-    // productId na mile to bhi purana hisaab poora rehta hai.
-    for (const sale of data.sales || []) {
-      ops.push((b) =>
-        b.set(doc(col('sales')), {
-          ...strip(sale),
-          items: (sale.items || []).map((i) => ({
-            ...i,
-            productId: prodMap.get(i.productId) ?? i.productId,
-          })),
-        }),
-      )
     }
     await commitInChunks(ops)
   }

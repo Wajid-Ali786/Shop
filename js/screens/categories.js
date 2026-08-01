@@ -1,5 +1,5 @@
 import { esc, escAttr, on, toast, openSheet, closeSheet, $ } from '../lib/dom.js'
-import { confirmModal, alertModal } from '../lib/modal.js'
+import { confirmModal, alertModal, chooseModal } from '../lib/modal.js'
 import { t, localizedName } from '../i18n/index.js'
 import { goBack } from '../lib/router.js'
 import {
@@ -10,6 +10,7 @@ import {
   seedDefaultCategories,
   findDuplicateCategories,
   mergeDuplicateCategories,
+  mergeCategories,
 } from '../store.js'
 import { appBar, field, icon, loading } from '../components.js'
 
@@ -19,10 +20,28 @@ const ICON_CHOICES = [
   '🧼', '🪥', '🧹', '🧊', '🥤', '🍬', '🥚', '🧴',
 ]
 
+/**
+ * Haath se milane wali halat: app sirf wo joriyan khud pakarti hai jin ke naam
+ * mil jate hain. "Cold Drink" aur "Cold Drinks" jaisi joriyan dukandar hi
+ * pehchan sakta hai, is liye chunne ka tareeqa bhi hona chahiye.
+ */
+let mergeMode = false
+let picked = new Set()
+
+function exitMergeMode() {
+  mergeMode = false
+  picked = new Set()
+}
+
 export function renderCategories(root) {
   if (!state.ready) {
     root.innerHTML = loading()
     return
+  }
+
+  // Jo category darmiyan me hat gayi (kisi doosre phone se) wo chuni na rahe.
+  for (const id of picked) {
+    if (!state.categories.some((c) => c.id === id)) picked.delete(id)
   }
 
   const counts = new Map()
@@ -35,12 +54,20 @@ export function renderCategories(root) {
     <div class="screen">
       ${appBar(t('categories.title'), {
         back: true,
-        action: `<button class="icon-btn icon-btn--brand" data-new
-          aria-label="${escAttr(t('categories.add'))}">${icon('plus')}</button>`,
+        action: `
+          ${
+            state.categories.length > 1
+              ? `<button class="icon-btn${mergeMode ? ' icon-btn--brand' : ''}" data-merge-mode
+                   aria-pressed="${mergeMode}"
+                   aria-label="${escAttr(t('categories.mergeMode'))}">${icon('merge')}</button>`
+              : ''
+          }
+          <button class="icon-btn icon-btn--brand" data-new
+            aria-label="${escAttr(t('categories.add'))}">${icon('plus')}</button>`,
       })}
 
       <div class="pad">
-        ${duplicateBanner()}
+        ${mergeMode ? `<p class="small muted" style="margin-bottom:12px">${esc(t('categories.mergeHint'))}</p>` : duplicateBanner()}
         ${
           state.categories.length === 0
             ? `<div class="empty">
@@ -49,27 +76,73 @@ export function renderCategories(root) {
                  <button class="btn btn--secondary" data-seed>${esc(t('categories.restoreDefaults'))}</button>
                </div>`
             : `<ul class="plist">${state.categories
-                .map(
-                  (cat) => `
-                <li class="pcard">
-                  <span class="thumb" style="width:44px;height:44px;font-size:1.3rem">${esc(cat.icon || '📦')}</span>
-                  <button class="pcard__main" data-edit="${escAttr(cat.id)}">
-                    <div style="min-width:0;flex:1">
-                      <p class="bold truncate" dir="auto">${esc(localizedName(cat))}</p>
-                      <p class="tiny muted">${esc(t('categories.productCount', { count: counts.get(cat.id) || 0 }))}</p>
-                    </div>
-                  </button>
-                  <button class="icon-btn icon-btn--danger" data-del="${escAttr(cat.id)}"
-                    aria-label="${escAttr(t('common.delete'))}">${icon('trash')}</button>
-                </li>`,
-                )
+                .map((cat) => (mergeMode ? mergeRow(cat, counts) : normalRow(cat, counts)))
                 .join('')}</ul>`
         }
       </div>
-    </div>`
+    </div>
 
-  on(root, 'click', '[data-back]', () => goBack())
+    ${
+      mergeMode && picked.size > 1
+        ? `<div class="savebar">
+             <button class="btn btn--primary btn--full" data-do-merge>
+               ${esc(t('categories.mergeCount', { count: picked.size }))}
+             </button>
+           </div>`
+        : ''
+    }`
+
+  on(root, 'click', '[data-back]', () => {
+    exitMergeMode()
+    goBack()
+  })
   on(root, 'click', '[data-new]', () => openEditor(null))
+
+  on(root, 'click', '[data-merge-mode]', () => {
+    if (mergeMode) exitMergeMode()
+    else mergeMode = true
+    renderCategories(root)
+  })
+
+  on(root, 'click', '[data-pick]', (_e, el) => {
+    const id = el.dataset.pick
+    if (picked.has(id)) picked.delete(id)
+    else picked.add(id)
+    renderCategories(root)
+  })
+
+  on(root, 'click', '[data-do-merge]', async (_e, el) => {
+    const chosen = state.categories.filter((c) => picked.has(c.id))
+    if (chosen.length < 2) return
+
+    // Kaun sa naam rehna hai — ye faisla dukandar ka hai, app ka nahi.
+    const keepId = await chooseModal({
+      title: t('categories.mergeKeepTitle'),
+      message: t('categories.mergeKeepBody'),
+      options: chosen.map((c) => ({
+        label: `${c.icon || '📦'} ${localizedName(c)}`,
+        description: t('categories.productCount', { count: counts.get(c.id) || 0 }),
+        value: c.id,
+      })),
+    })
+    if (!keepId) return
+
+    el.disabled = true
+    try {
+      const result = await mergeCategories(
+        keepId,
+        chosen.map((c) => c.id),
+      )
+      exitMergeMode()
+      await alertModal({
+        title: t('categories.mergeKeepTitle'),
+        message: t('categories.mergeDone', { products: result.products }),
+      })
+    } catch (err) {
+      el.disabled = false
+      toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
+    }
+  })
 
   on(root, 'click', '[data-merge-dupes]', async (_e, el) => {
     const dupes = findDuplicateCategories()
@@ -126,6 +199,38 @@ export function renderCategories(root) {
       toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
     }
   })
+}
+
+function normalRow(cat, counts) {
+  return `
+    <li class="pcard">
+      <span class="thumb" style="width:44px;height:44px;font-size:1.3rem">${esc(cat.icon || '📦')}</span>
+      <button class="pcard__main" data-edit="${escAttr(cat.id)}">
+        <div style="min-width:0;flex:1">
+          <p class="bold truncate" dir="auto">${esc(localizedName(cat))}</p>
+          <p class="tiny muted">${esc(t('categories.productCount', { count: counts.get(cat.id) || 0 }))}</p>
+        </div>
+      </button>
+      <button class="icon-btn icon-btn--danger" data-del="${escAttr(cat.id)}"
+        aria-label="${escAttr(t('common.delete'))}">${icon('trash')}</button>
+    </li>`
+}
+
+/** Milane wali halat me poori row hi tap target hai — nishan lagana asaan ho. */
+function mergeRow(cat, counts) {
+  const on_ = picked.has(cat.id)
+  return `
+    <li class="pcard">
+      <button class="pcard__main" data-pick="${escAttr(cat.id)}" aria-pressed="${on_}"
+        style="gap:12px">
+        <span class="tickbox${on_ ? ' tickbox--on' : ''}" aria-hidden="true">${on_ ? '✓' : ''}</span>
+        <span style="font-size:1.3rem">${esc(cat.icon || '📦')}</span>
+        <div style="min-width:0;flex:1">
+          <p class="bold truncate" dir="auto">${esc(localizedName(cat))}</p>
+          <p class="tiny muted">${esc(t('categories.productCount', { count: counts.get(cat.id) || 0 }))}</p>
+        </div>
+      </button>
+    </li>`
 }
 
 /**

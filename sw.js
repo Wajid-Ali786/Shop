@@ -9,7 +9,7 @@
  * na ho to internet band hone par app khulti hi nahi. Firestore ka apna offline
  * cache tab hi kaam aata hai jab SDK khud load ho jaye.
  */
-const VERSION = 'v1'
+const VERSION = 'v2'
 const APP_CACHE = `karyana-app-${VERSION}`
 const VENDOR_CACHE = `karyana-vendor-${VERSION}`
 
@@ -57,9 +57,6 @@ const APP_FILES = [
   './js/screens/product-detail.js',
   './js/screens/product-form.js',
   './js/screens/products.js',
-  './js/screens/receipt.js',
-  './js/screens/sale.js',
-  './js/screens/sales.js',
   './js/screens/settings.js',
   './js/screens/stock-sheet.js',
   './js/screens/stock.js',

@@ -1,7 +1,7 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, productById, todayTotals } from '../store.js'
+import { state, productById } from '../store.js'
 import { empty, loading, section, movementRow } from '../components.js'
 import { formatMoney, formatDateTime } from '../lib/format.js'
 import { groupStockAlerts } from './stock.js'
@@ -30,7 +30,6 @@ export function renderDashboard(root) {
       </header>
 
       <div class="pad" style="padding-top:0">
-        ${todayCard()}
         ${
           state.products.length === 0
             ? empty(
@@ -83,35 +82,6 @@ export function renderDashboard(root) {
 
   on(root, 'click', '[data-add]', () => navigate('/product/new'))
   on(root, 'click', '[data-go]', (_e, el) => navigate(el.dataset.go))
-}
-
-/**
- * Aaj ki bikri sab se upar — dukandar din me sab se zyada yehi dekhta hai:
- * "abhi tak kitna bika, kitna bacha".
- */
-function todayCard() {
-  const today = todayTotals()
-  const currency = state.settings.currency
-
-  return `
-    <div class="card today" style="margin-bottom:16px">
-      <div class="row row--between" style="margin-bottom:10px">
-        <span class="stat__label">${esc(t('sales.todayTotal'))}</span>
-        <button class="btn btn--ghost btn--sm" data-go="/sales">${esc(t('sales.viewAll'))}</button>
-      </div>
-
-      <p style="font-size:1.9rem;font-weight:700;line-height:1.1">
-        ${esc(formatMoney(today.total, currency))}
-      </p>
-      <p class="small muted" style="margin-top:2px">
-        ${esc(t('sales.todayCount', { count: today.count }))} ·
-        <span style="color:var(--brand)">${esc(t('sales.profitLine', { amount: formatMoney(today.profit, currency) }))}</span>
-      </p>
-
-      <button class="btn btn--primary btn--full" data-go="/sale" style="margin-top:14px">
-        🧾 ${esc(t('sale.new'))}
-      </button>
-    </div>`
 }
 
 function stat(label, value, tone = '', goTo = '', small = false) {
