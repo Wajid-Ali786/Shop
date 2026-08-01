@@ -692,7 +692,17 @@ const DEFAULT_CATEGORIES = [
 ]
 
 export async function seedDefaultCategories() {
-  if (state.categories.length > 0) return 0
+  // `state.categories` khali hone ka matlab hamesha ye nahi ke dukan me
+  // categories nahi hain — ho sakta hai un ka pehla snapshot abhi aaya hi na
+  // ho. App `ready` products ki list par karti hai, jo khali dukan me foran
+  // aa jati hai, aur us lamhe categories abhi raste me hoti hain. Isi wajah
+  // se har sign-in par default categories dobara ban jati thin: teen martaba
+  // login karne wale ko har category teen baar nazar aati thi.
+  //
+  // Server se poochna hi bharosay ke laiq hai. Ye ek hi baar hota hai.
+  const existing = await getDocs(col('categories'))
+  if (!existing.empty) return 0
+
   const batch = writeBatch(dbf)
   DEFAULT_CATEGORIES.forEach((cat, i) => {
     batch.set(doc(col('categories')), { ...cat, sortOrder: (i + 1) * 10 })

@@ -22,9 +22,9 @@ export const ICONS = {
     '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" stroke-linecap="round" stroke-linejoin="round"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/>',
   plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
-  // Do raste ek me milte hue — categories jorne ke liye.
+  // Do raste neeche aa kar ek ho jate hain — categories milane ke liye.
   merge:
-    '<path d="M6 3v4c0 3 2.5 5 6 5s6 2 6 5v4M6 21V3m12 18v-6m-3 3l3 3 3-3" stroke-linecap="round" stroke-linejoin="round"/>',
+    '<path d="M6 3v5c0 2.8 2.7 5 6 5s6-2.2 6-5V3M12 13v8m-3.5-3.5L12 21l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/>',
   viewList:
     '<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>',
   viewGrid:
