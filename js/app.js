@@ -14,8 +14,6 @@ import { renderWelcome } from './screens/welcome.js'
 import { renderLogin, renderSetupNeeded } from './screens/login.js'
 import { renderDashboard } from './screens/dashboard.js'
 import { renderProducts } from './screens/products.js'
-import { renderSale } from './screens/sale.js'
-import { renderSales } from './screens/sales.js'
 import { renderProductForm } from './screens/product-form.js'
 import { renderProductDetail } from './screens/product-detail.js'
 import { renderStock } from './screens/stock.js'
@@ -132,8 +130,6 @@ function render() {
 function routeTo(path, screen) {
   if (path === '/') return renderDashboard(screen)
   if (path === '/products') return renderProducts(screen, render)
-  if (path === '/sale') return renderSale(screen, render)
-  if (path === '/sales') return renderSales(screen)
   if (path === '/stock') return renderStock(screen, render)
   if (path === '/settings') return renderSettings(screen, render)
   if (path === '/categories') return renderCategories(screen)

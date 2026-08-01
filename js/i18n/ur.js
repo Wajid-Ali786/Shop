@@ -1,7 +1,6 @@
 export const ur = {
   // nav
   'nav.home': 'ہوم',
-  'nav.sale': 'بکری',
   'nav.products': 'پروڈکٹس',
   'nav.stock': 'اسٹاک',
   'nav.settings': 'سیٹنگز',
@@ -101,28 +100,6 @@ export const ur = {
   'account.errEmailTaken': 'یہ ای میل کسی اور اکاؤنٹ میں استعمال ہو رہا ہے',
 
   // bikri (sale)
-  'sale.title': 'نئی بکری',
-  'sale.new': 'بکری شروع کریں',
-  'sale.searchPlaceholder': 'پروڈکٹ تلاش کر کے شامل کریں…',
-  'sale.emptyTitle': 'ابھی کچھ شامل نہیں',
-  'sale.emptyBody': 'اوپر تلاش کریں اور پروڈکٹ پر ٹیپ کر کے بل میں ڈالیں۔',
-  'sale.total': 'کل',
-  'sale.complete': 'پیسے لیں',
-  'sale.clear': 'بل صاف کریں',
-  'sale.moreThanStock': 'موجودہ ({stock}) سے زیادہ — پھر بھی بیچ رہے ہیں',
-  'sale.receipt': 'پرچی',
-  'sale.profitLine': 'منافع {amount}',
-
-  'sales.title': 'آج کا حساب',
-  'sales.today': 'آج',
-  'sales.earlier': 'پہلے کی',
-  'sales.todayTotal': 'آج کی بکری',
-  'sales.todayProfit': 'آج کا منافع',
-  'sales.todayCount': '{count} بکریاں',
-  'sales.itemCount': '{count} چیزیں',
-  'sales.viewAll': 'سب دیکھیں',
-  'sales.emptyToday': 'آج ابھی کوئی بکری نہیں',
-  'sales.emptyTodayHint': 'ہر بکری یہاں نظر آئے گی۔',
 
   // offline banner
   'net.offline': 'آف لائن — انٹرنیٹ آنے پر تبدیلیاں خودکار سیو ہو جائیں گی',
@@ -288,6 +265,12 @@ export const ur = {
     'انہیں ایک میں ملا دیں؟ پروڈکٹس ہر نام کی پہلی کیٹیگری میں چلے جائیں گے — کچھ ڈیلیٹ نہیں ہو گا۔ متاثرہ: {names}',
   'categories.merge': 'ملا دیں',
   'categories.merged': '{count} کیٹیگریز مل گئیں۔ {products} پروڈکٹس منتقل ہوئے۔',
+  'categories.mergeMode': 'خود کیٹیگریاں ملائیں',
+  'categories.mergeHint': 'جو کیٹیگریاں ایک ہی چیز ہیں، ان پر نشان لگائیں۔',
+  'categories.mergeCount': '{count} ملائیں',
+  'categories.mergeKeepTitle': 'کون سا نام رہے گا؟',
+  'categories.mergeKeepBody': 'باقی کے پروڈکٹس اسی میں آ جائیں گے۔ کچھ ڈیلیٹ نہیں ہو گا۔',
+  'categories.mergeDone': 'مل گئیں۔ {products} پروڈکٹس منتقل ہوئے۔',
 
   // settings
   'settings.title': 'سیٹنگز',
