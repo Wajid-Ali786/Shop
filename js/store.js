@@ -554,8 +554,15 @@ async function writeStockChange({ productId, amount, type, reason, note, absolut
         return balanceAfter
       })
     } catch (err) {
-      // Sirf network ki wajah se nakami par fallback; baqi ghaltiyan aage bhejo.
-      if (err?.code === 'permission-denied' || err?.message === 'Product nahi mila') throw err
+      // Sirf internet ki wajah se nakami par neeche wale raaste par jate hain.
+      //
+      // Pehle yahan ulta likha tha: do soorton ke ilawa HAR ghalti par fallback
+      // ho jata tha. Yaani do device ek saath likhein aur transaction takra kar
+      // `aborted` de, to app local cache ki (mumkin hai purani) ginti par naya
+      // stock likh deti thi. Stock ka ghalat hona is app ki sab se buri kharabi
+      // hai, is liye ab sirf wo ghaltiyan maaf hain jo waqai internet ki hain.
+      const network = err?.code === 'unavailable' || err?.code === 'deadline-exceeded'
+      if (!network) throw err
     }
   }
 
@@ -769,27 +776,42 @@ export async function restoreExport(data, mode = 'merge') {
   }
 
   if (mode === 'replace') {
-    const existing = await Promise.all([
-      getDocs(col('products')),
-      getDocs(col('categories')),
-      getDocs(col('movements')),
-      getDocs(col('images')),
+    // TARTEEB AHEM HAI: pehle likho, phir jo bacha wo hatao.
+    //
+    // Pehle ulta tha — poori dukan delete ho jati thi aur phir file ka data
+    // likha jata tha. Beech me internet chala jaye, browser band ho jaye, ya
+    // ek batch fail ho jaye, to dukandar ke paas kuch bhi nahi bachta tha: na
+    // purana data, na naya. Ab har lamhe dukan me poora data mojood rehta hai.
+    // Restore adhoora reh jaye to sab se bura yehi hoga ke kuch purane record
+    // bache reh jayen — jo mit jane se bohat behtar hai.
+    const incoming = [
+      ['categories', data.categories, (c) => strip(c)],
+      ['products', data.products, (p) => strip(p)],
+      ['movements', data.movements || [], (m) => strip(m)],
+      ['images', data.images || [], (img) => ({ data: img.data })],
       // Bikri wala hissa nikal diya gaya hai; purane data me `sales` bache ho
       // sakte hain, aur "replace" ka matlab hai poori safai.
-      getDocs(col('sales')),
-    ])
-    await commitInChunks(
-      existing.flatMap((snap) => snap.docs.map((d) => (batch) => batch.delete(d.ref))),
-    )
+      ['sales', [], null],
+    ]
+
+    const existing = await Promise.all(incoming.map(([name]) => getDocs(col(name))))
 
     const ops = []
-    for (const c of data.categories) ops.push((b) => b.set(doc(col('categories'), c.id), strip(c)))
-    for (const p of data.products) ops.push((b) => b.set(doc(col('products'), p.id), strip(p)))
-    for (const m of data.movements || []) ops.push((b) => b.set(doc(col('movements'), m.id), strip(m)))
-    for (const img of data.images || []) {
-      ops.push((b) => b.set(doc(col('images'), img.id), { data: img.data }))
+    for (const [name, rows, shape] of incoming) {
+      for (const row of rows) ops.push((b) => b.set(doc(col(name), row.id), shape(row)))
     }
     await commitInChunks(ops)
+
+    // Ids wahi rehti hain, is liye upar wali likhai ne file wale record pehle
+    // hi nayi shakal me daal diye — sirf jo bacha hua hai wo hatate hain.
+    const deletions = []
+    existing.forEach((snap, i) => {
+      const keep = new Set(incoming[i][1].map((row) => row.id))
+      for (const d of snap.docs) {
+        if (!keep.has(d.id)) deletions.push((batch) => batch.delete(d.ref))
+      }
+    })
+    await commitInChunks(deletions)
   } else {
     // Nayi ids banti hain, is liye purani → nayi ka naqsha rakhna parta hai.
     const catMap = new Map()
@@ -797,9 +819,25 @@ export async function restoreExport(data, mode = 'merge') {
     const prodMap = new Map()
 
     const ops = []
+
+    // Isi naam ki category pehle se maujood ho to NAYI nahi banti — us ke
+    // products seedha purani category me chale jate hain.
+    //
+    // Warna backup wapas daalte hi har category do baar ho jati thi: dukan me
+    // pehle se "اناج و دالیں" hai, file me bhi hai, aur merge dono rakh leta
+    // tha. Yehi baat file ke andar ki apni duplicate categories par bhi lagti
+    // hai, is liye jo abhi is chakkar me banai hain unhein bhi yaad rakhte hain.
+    const madeHere = new Map() // naam ki key → nayi id
     for (const c of data.categories) {
+      const keys = categoryKeys(c)
+      const existingId = findCategoryByName(c)?.id ?? keys.map((k) => madeHere.get(k)).find(Boolean)
+      if (existingId) {
+        catMap.set(c.id, existingId)
+        continue
+      }
       const ref = doc(col('categories'))
       catMap.set(c.id, ref.id)
+      for (const k of keys) madeHere.set(k, ref.id)
       ops.push((b) => b.set(ref, strip(c)))
     }
     for (const img of data.images || []) {
