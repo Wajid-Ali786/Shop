@@ -10,8 +10,10 @@ import {
   catalogOn,
   publishCatalog,
   unpublishCatalog,
+  backupReminderDays,
+  BACKUP_REMINDER_CHOICES,
 } from '../store.js'
-import { appBar, field, icon, section } from '../components.js'
+import { appBar, field, options, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
 import { currentEmail, signOut } from '../firebase.js'
 import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
@@ -86,6 +88,20 @@ export function renderSettings(root, rerender) {
              </button>
              <input type="file" accept="application/json,.json" id="restore-file" hidden>
              <p class="small muted" style="margin-top:12px">${esc(t('settings.restoreDesc'))}</p>
+
+             <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+               ${field(
+                 t('settings.backupReminder'),
+                 `<select id="s-backupDays">${options(
+                   BACKUP_REMINDER_CHOICES.map((d) => ({
+                     value: String(d),
+                     label: d === 0 ? t('settings.backupReminderOff') : t('settings.backupReminderDays', { days: d }),
+                   })),
+                   String(backupReminderDays(settings)),
+                 )}</select>`,
+                 { hint: t('settings.backupReminderHint') },
+               )}
+             </div>
            </div>`,
         )}
 
@@ -160,6 +176,7 @@ export function renderSettings(root, rerender) {
   bindSetting(root, '#s-shopName', 'shopName', (v) => v)
   bindSetting(root, '#s-currency', 'currency', (v) => v.trim() || 'Rs')
   bindSetting(root, '#s-lowStock', 'defaultLowStockAt', (v) => Number(v) || 0)
+  bindSetting(root, '#s-backupDays', 'backupReminderDays', (v) => Number(v) || 0)
 
   // ---- export ----
   on(root, 'click', '[data-export]', async (_e, el) => {

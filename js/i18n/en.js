@@ -120,6 +120,8 @@ export const en = {
   'home.noActivity': 'No stock activity yet',
   'home.backupTitle': 'Save a backup',
   'catalog.tagline': 'Browse what the shop has',
+  'catalog.inStockOnly': 'In stock only',
+  'catalog.outOfStock': 'Out of stock',
   'catalog.searchPlaceholder': 'Search products',
   'catalog.empty': 'Nothing on show yet',
   'catalog.emptyHint': 'The shopkeeper has not published any products.',
@@ -131,6 +133,11 @@ export const en = {
   'settings.catalogSafety':
     'Only the name, photo and selling price are shared. Your cost price, wholesale price and stock counts are never published.',
   'settings.catalogRepublish': 'Publish again',
+  'settings.backupReminder': 'Remind me to back up',
+  'settings.backupReminderDays': 'Every {days} days',
+  'settings.backupReminderOff': 'Never remind me',
+  'settings.backupReminderHint':
+    'A card appears on the home screen when your last backup is older than this.',
   'settings.catalogWorking': 'Working…',
   'settings.catalogPublished': '{count} products are now public',
   'settings.catalogOffConfirm':

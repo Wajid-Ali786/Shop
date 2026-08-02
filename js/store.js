@@ -51,26 +51,38 @@ export function defaultSettings() {
     theme: 'system',
     // Aakhri backup kab hua (millis). `null` = kabhi nahi.
     lastBackupAt: null,
+    // Yaad-dihani kitne din baad. 0 = band.
+    backupReminderDays: 14,
     // Grahak wala catalog (bina login ke dikhne wali list) chalu hai ya nahi.
     publicCatalog: false,
   }
 }
 
 /**
- * Itne din baad backup ki yaad-dihani aati hai.
+ * Backup ki yaad-dihani kitne din baad aaye — dukandar khud chunta hai.
  *
  * Data Firebase me hai, is liye phone tootne ya kho jane se kuch nahi jata.
  * Backup us se bachata hai jo Firebase nahi rok sakta: ghalti se product ya
  * category delete kar dena, ya account tak rasai khatam ho jana.
+ *
+ * `0` ka matlab yaad-dihani band.
  */
-export const BACKUP_REMINDER_DAYS = 14
+export const BACKUP_REMINDER_CHOICES = [7, 14, 30, 60, 0]
+export const DEFAULT_BACKUP_REMINDER_DAYS = 14
+
+export function backupReminderDays(settings = state.settings) {
+  const days = Number(settings.backupReminderDays)
+  return Number.isFinite(days) && days >= 0 ? days : DEFAULT_BACKUP_REMINDER_DAYS
+}
 
 /** Backup ki yaad-dihani dikhani chahiye? */
 export function backupDue(settings = state.settings) {
+  const days = backupReminderDays(settings)
+  if (!days) return false // dukandar ne band kar rakhi hai
   if (!state.products.length) return false // khali dukan ka backup bay-maani hai
   const last = settings.lastBackupAt
   if (!last) return true
-  return Date.now() - last > BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000
+  return Date.now() - last > days * 24 * 60 * 60 * 1000
 }
 
 /** Backup ke din ginti — banner me dikhane ke liye. */
@@ -312,6 +324,7 @@ export async function createCategory(data) {
     icon: data.icon ?? '📦',
     sortOrder,
   })
+  await syncPublicCategories()
   // Product form ko id chahiye hoti hai taake nayi category foran lag jaye.
   return ref.id
 }
@@ -406,6 +419,18 @@ async function applyCategoryMerge(remap) {
   }
 
   await commitInChunks(ops)
+
+  // Grahak wali list bhi milne ke baad ki halat dikhaye.
+  await syncPublicCategories()
+  for (const p of state.products) {
+    if (touched.has(p.id)) {
+      await syncPublicProduct({
+        ...p,
+        categoryIds: [...new Set((p.categoryIds || []).map((id) => remap.get(id) ?? id))],
+      })
+    }
+  }
+
   return { merged: remap.size, products: touched.size }
 }
 
@@ -416,6 +441,7 @@ export async function updateCategory(id, changes) {
   // Category ka naam products ke searchBlob ka hissa hai — lekin sirf usi
   // category ke products ka.
   await rebuildSearchBlobs(id)
+  await syncPublicCategories()
 }
 
 /**
@@ -439,6 +465,14 @@ export async function deleteCategory(id) {
     )
   }
   await commitInChunks(ops)
+
+  await syncPublicCategories()
+  for (const p of affected) {
+    await syncPublicProduct({
+      ...p,
+      categoryIds: (p.categoryIds || []).filter((c) => c !== id),
+    })
+  }
 }
 
 // ---------------------------------------------------------------- products
@@ -624,18 +658,22 @@ async function writeStockChange({ productId, amount, type, reason, note, absolut
 export async function adjustStock({ productId, qty, type, reason, note }) {
   const amount = Math.abs(round3(qty))
   if (!amount) throw new Error('Quantity zero nahi ho sakti')
-  return writeStockChange({ productId, amount, type, reason, note })
+  const balance = await writeStockChange({ productId, amount, type, reason, note })
+  await syncPublicStock(productId, balance)
+  return balance
 }
 
 /** Ginti kar ke stock theek karna — "abhi asal me itna para hai". */
 export async function setStockCount(productId, countedQty, note) {
-  return writeStockChange({
+  const balance = await writeStockChange({
     productId,
     type: 'adjust',
     reason: 'correction',
     note,
     absolute: round3(Math.max(0, countedQty)),
   })
+  await syncPublicStock(productId, balance)
+  return balance
 }
 
 /**
@@ -777,21 +815,43 @@ function publicCol(name, uid) {
   return collection(publicShopRef(uid), name)
 }
 
-/** Ek product ka wo hissa jo grahak dekh sakta hai. */
+/**
+ * Ek product ka wo hissa jo grahak dekh sakta hai:
+ * tasveer, naam, qeemat aur stock. Bas.
+ *
+ * Yahan ek ek field haath se likhi gayi hai — `...product` kar ke "buri
+ * cheezein hata do" wala tareeqa jaan boojh kar nahi. Us soorat me kal koi
+ * nayi field product me add karta aur wo khud-ba-khud public ho jati. Is
+ * tarah nayi field tab tak bahar nahi jati jab tak yahan likhi na jaye.
+ */
 function publicShapeOf(product) {
   return {
     nameEn: product.nameEn ?? '',
     nameUr: product.nameUr ?? null,
     salePrice: product.salePrice ?? 0,
-    // Naap ka lafz (kg / packet) — rate samajhne ke liye zaroori hai.
+    // Grahak ko batana hai ke maal kitna para hai.
+    stockQty: product.stockQty ?? 0,
+    // Naap ka lafz (kg / packet) — rate aur ginti samajhne ke liye zaroori.
     sellBy: product.sellBy ?? 'pack',
     unit: product.unit ?? null,
     packLabel: product.packLabel ?? null,
     packSize: product.packSize ?? null,
     packUnit: product.packUnit ?? null,
     imageId: product.imageId ?? null,
+    // Category ki chhanti ke liye — sirf ids, naam alag collection me.
+    categoryIds: product.categoryIds ?? [],
     // Khatam-shuda ya chhupi hui cheez grahak ko nahi dikhni chahiye.
     hidden: (product.status || 'active') !== 'active',
+  }
+}
+
+/** Category ka public hissa — sirf naam aur icon. */
+function publicCategoryShapeOf(cat) {
+  return {
+    nameEn: cat.nameEn ?? '',
+    nameUr: cat.nameUr ?? null,
+    icon: cat.icon ?? '📦',
+    sortOrder: cat.sortOrder ?? 0,
   }
 }
 
@@ -855,15 +915,25 @@ export async function publishCatalog() {
     // `#/shop/{uid}` link se khulta hai.
   }
 
-  const existing = await getDocs(publicCol('products', uid))
+  const [existing, existingCats] = await Promise.all([
+    getDocs(publicCol('products', uid)),
+    getDocs(publicCol('categories', uid)),
+  ])
   const keep = new Set(state.products.map((p) => p.id))
+  const keepCats = new Set(state.categories.map((c) => c.id))
 
   const ops = []
   for (const p of state.products) {
     ops.push((b) => b.set(doc(publicCol('products', uid), p.id), publicShapeOf(p)))
   }
+  for (const c of state.categories) {
+    ops.push((b) => b.set(doc(publicCol('categories', uid), c.id), publicCategoryShapeOf(c)))
+  }
   for (const d of existing.docs) {
     if (!keep.has(d.id)) ops.push((b) => b.delete(d.ref))
+  }
+  for (const d of existingCats.docs) {
+    if (!keepCats.has(d.id)) ops.push((b) => b.delete(d.ref))
   }
   await commitInChunks(ops)
 
@@ -876,14 +946,62 @@ export async function publishCatalog() {
 /** Catalog band karna — public copy poori tarah mit jati hai. */
 export async function unpublishCatalog() {
   const uid = currentUid()
-  const [products, images] = await Promise.all([
+  const [products, images, categories] = await Promise.all([
     getDocs(publicCol('products', uid)),
     getDocs(publicCol('images', uid)),
+    getDocs(publicCol('categories', uid)),
   ])
   await commitInChunks(
-    [...products.docs, ...images.docs].map((d) => (b) => b.delete(d.ref)),
+    [...products.docs, ...images.docs, ...categories.docs].map((d) => (b) => b.delete(d.ref)),
   )
   await deleteDoc(publicShopRef(uid)).catch(() => {})
+
+  // Home page ka ishara bhi chhor dete hain, warna ye dukan catalog band karne
+  // ke baad bhi ishara pakre baithi rehti aur home page hamesha ke liye khali
+  // ho jata — koi doosri dukan usay le hi nahi sakti thi.
+  try {
+    const snap = await getDoc(doc(dbf, PUBLIC_INDEX, 'default'))
+    if (snap.exists() && snap.data().uid === uid) {
+      await deleteDoc(doc(dbf, PUBLIC_INDEX, 'default'))
+    }
+  } catch {
+    // Ishara na chhoot sake to bhi catalog to hat hi chuka hai.
+  }
+}
+
+/**
+ * Sirf stock ki ginti taza karna.
+ *
+ * Stock din me kai baar badalta hai, aur har dafa poora product dobara likhna
+ * bay-kaar hai — ek hi field kaafi hai.
+ */
+async function syncPublicStock(productId, stockQty) {
+  if (!catalogOn()) return
+  try {
+    await updateDoc(doc(publicCol('products'), productId), { stockQty })
+  } catch {
+    // Ho sakta hai ye product abhi public list me na ho — "dobara shaya
+    // karein" se theek ho jata hai.
+  }
+}
+
+/** Categories ki public copy — ginti kam hoti hai, is liye poori dobara. */
+async function syncPublicCategories() {
+  if (!catalogOn()) return
+  const uid = currentUid()
+  try {
+    const existing = await getDocs(publicCol('categories', uid))
+    const keep = new Set(state.categories.map((c) => c.id))
+    const ops = state.categories.map(
+      (c) => (b) => b.set(doc(publicCol('categories', uid), c.id), publicCategoryShapeOf(c)),
+    )
+    for (const d of existing.docs) {
+      if (!keep.has(d.id)) ops.push((b) => b.delete(d.ref))
+    }
+    await commitInChunks(ops)
+  } catch {
+    // Upar wali wajah.
+  }
 }
 
 /**
@@ -894,9 +1012,11 @@ export async function unpublishCatalog() {
  */
 export async function loadPublicShop(uid) {
   if (!uid) return null
-  const [shopSnap, productSnap] = await Promise.all([
-    getDoc(doc(dbf, 'publicShops', uid)),
-    getDocs(collection(doc(dbf, 'publicShops', uid), 'products')),
+  const shopDoc = doc(dbf, 'publicShops', uid)
+  const [shopSnap, productSnap, categorySnap] = await Promise.all([
+    getDoc(shopDoc),
+    getDocs(collection(shopDoc, 'products')),
+    getDocs(collection(shopDoc, 'categories')),
   ])
   if (!shopSnap.exists()) return null
 
@@ -905,7 +1025,11 @@ export async function loadPublicShop(uid) {
     .filter((p) => !p.hidden)
     .sort((a, b) => String(a.nameEn).localeCompare(String(b.nameEn)))
 
-  return { uid, ...shopSnap.data(), products }
+  const categories = categorySnap.docs
+    .map((d) => ({ ...d.data(), id: d.id }))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+
+  return { uid, ...shopSnap.data(), products, categories }
 }
 
 /** Public tasveer — grahak wali list ke liye. */

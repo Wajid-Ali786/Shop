@@ -120,6 +120,8 @@ export const ur = {
   'home.noActivity': 'ابھی کوئی اسٹاک سرگرمی نہیں',
   'home.backupTitle': 'بیک اپ محفوظ کریں',
   'catalog.tagline': 'دیکھیں دکان میں کیا ہے',
+  'catalog.inStockOnly': 'صرف موجود مال',
+  'catalog.outOfStock': 'ختم',
   'catalog.searchPlaceholder': 'اشیاء تلاش کریں',
   'catalog.empty': 'ابھی کچھ نمائش پر نہیں',
   'catalog.emptyHint': 'دکاندار نے ابھی کوئی چیز عام نہیں کی۔',
@@ -131,6 +133,11 @@ export const ur = {
   'settings.catalogSafety':
     'صرف نام، تصویر اور بیچنے کا ریٹ باہر جاتا ہے۔ آپ کا خرید ریٹ، تھوک ریٹ اور اسٹاک کی گنتی کبھی عام نہیں ہوتی۔',
   'settings.catalogRepublish': 'دوبارہ شائع کریں',
+  'settings.backupReminder': 'بیک اپ کی یاد دہانی',
+  'settings.backupReminderDays': 'ہر {days} دن بعد',
+  'settings.backupReminderOff': 'کبھی یاد نہ دلائیں',
+  'settings.backupReminderHint':
+    'آخری بیک اپ اس سے پرانا ہو جائے تو ہوم اسکرین پر یاد دہانی آ جاتی ہے۔',
   'settings.catalogWorking': 'کام جاری ہے…',
   'settings.catalogPublished': '{count} اشیاء اب عام ہیں',
   'settings.catalogOffConfirm':
