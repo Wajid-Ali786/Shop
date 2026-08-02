@@ -49,7 +49,32 @@ export function defaultSettings() {
     currency: 'Rs',
     defaultLowStockAt: 5,
     theme: 'system',
+    // Aakhri backup kab hua (millis). `null` = kabhi nahi.
+    lastBackupAt: null,
   }
+}
+
+/**
+ * Itne din baad backup ki yaad-dihani aati hai.
+ *
+ * Data Firebase me hai, is liye phone tootne ya kho jane se kuch nahi jata.
+ * Backup us se bachata hai jo Firebase nahi rok sakta: ghalti se product ya
+ * category delete kar dena, ya account tak rasai khatam ho jana.
+ */
+export const BACKUP_REMINDER_DAYS = 14
+
+/** Backup ki yaad-dihani dikhani chahiye? */
+export function backupDue(settings = state.settings) {
+  if (!state.products.length) return false // khali dukan ka backup bay-maani hai
+  const last = settings.lastBackupAt
+  if (!last) return true
+  return Date.now() - last > BACKUP_REMINDER_DAYS * 24 * 60 * 60 * 1000
+}
+
+/** Backup ke din ginti — banner me dikhane ke liye. */
+export function daysSinceBackup(settings = state.settings) {
+  if (!settings.lastBackupAt) return null
+  return Math.floor((Date.now() - settings.lastBackupAt) / (24 * 60 * 60 * 1000))
 }
 
 const listeners = new Set()

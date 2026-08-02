@@ -118,6 +118,9 @@ export const en = {
   'home.emptyBody': 'Add your first product to get started.',
   'home.recentActivity': 'Recent activity',
   'home.noActivity': 'No stock activity yet',
+  'home.backupTitle': 'Save a backup',
+  'home.backupNever': 'You have never saved a backup. Tap to save one.',
+  'home.backupOld': 'Last backup was {days} days ago. Tap to save a new one.',
 
   // products
   'products.title': 'Products',
@@ -134,6 +137,8 @@ export const en = {
   'products.inactive': 'Hidden',
   'products.discontinued': 'No longer available',
   'products.showArchived': 'Show hidden and discontinued ({count})',
+  'products.showMore': 'Show {count} more',
+  'products.showingOf': 'Showing {shown} of {total}',
   'products.hideArchived': 'Hide them again',
   'products.viewList': 'List view',
   'products.viewGrid': 'Grid view',

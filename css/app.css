@@ -258,6 +258,18 @@ h3 {
 .card--danger {
   border-color: var(--danger);
 }
+/* Poora card hi ek bara tap target — button ke default styles hata kar. */
+.card--tap {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.card--tap:active {
+  transform: scale(0.99);
+}
 .card--flat {
   padding: 12px;
   border-radius: var(--radius);

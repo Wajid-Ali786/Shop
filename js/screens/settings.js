@@ -146,6 +146,11 @@ export function renderSettings(root, rerender) {
       a.click()
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
+
+      // Backup ki tareekh yaad rakhte hain — isi se yaad-dihani band hoti hai.
+      // File banne ke BAAD likhi jati hai, warna nakam export bhi "ho gaya"
+      // gina jata.
+      await saveSetting('lastBackupAt', Date.now())
       toast(t('settings.exported'))
     } catch {
       toast(t('error.generic'))

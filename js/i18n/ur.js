@@ -118,6 +118,9 @@ export const ur = {
   'home.emptyBody': 'شروع کرنے کے لیے پہلی پروڈکٹ شامل کریں۔',
   'home.recentActivity': 'حالیہ سرگرمی',
   'home.noActivity': 'ابھی کوئی اسٹاک سرگرمی نہیں',
+  'home.backupTitle': 'بیک اپ محفوظ کریں',
+  'home.backupNever': 'آپ نے ابھی تک بیک اپ محفوظ نہیں کیا۔ محفوظ کرنے کے لیے دبائیں۔',
+  'home.backupOld': 'آخری بیک اپ {days} دن پہلے ہوا تھا۔ نیا محفوظ کرنے کے لیے دبائیں۔',
 
   // products
   'products.title': 'پروڈکٹس',
@@ -134,6 +137,8 @@ export const ur = {
   'products.inactive': 'چھپی ہوئی',
   'products.discontinued': 'اب نہیں ملتی',
   'products.showArchived': 'چھپی ہوئی اور بند شدہ دکھائیں ({count})',
+  'products.showMore': 'مزید {count} دکھائیں',
+  'products.showingOf': '{total} میں سے {shown} دکھائے جا رہے ہیں',
   'products.hideArchived': 'دوبارہ چھپا دیں',
   'products.viewList': 'لسٹ ویو',
   'products.viewGrid': 'گرڈ ویو',
