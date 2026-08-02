@@ -119,6 +119,22 @@ export const ur = {
   'home.recentActivity': 'حالیہ سرگرمی',
   'home.noActivity': 'ابھی کوئی اسٹاک سرگرمی نہیں',
   'home.backupTitle': 'بیک اپ محفوظ کریں',
+  'catalog.tagline': 'دیکھیں دکان میں کیا ہے',
+  'catalog.searchPlaceholder': 'اشیاء تلاش کریں',
+  'catalog.empty': 'ابھی کچھ نمائش پر نہیں',
+  'catalog.emptyHint': 'دکاندار نے ابھی کوئی چیز عام نہیں کی۔',
+  'settings.catalog': 'گاہک کی فہرست',
+  'settings.catalogDesc':
+    'جو بھی یہ سائٹ کھولے اسے بغیر لاگ اِن کے اشیاء کی فہرست دکھائیں۔',
+  'settings.catalogOn': 'چالو',
+  'settings.catalogOff': 'بند',
+  'settings.catalogSafety':
+    'صرف نام، تصویر اور بیچنے کا ریٹ باہر جاتا ہے۔ آپ کا خرید ریٹ، تھوک ریٹ اور اسٹاک کی گنتی کبھی عام نہیں ہوتی۔',
+  'settings.catalogRepublish': 'دوبارہ شائع کریں',
+  'settings.catalogWorking': 'کام جاری ہے…',
+  'settings.catalogPublished': '{count} اشیاء اب عام ہیں',
+  'settings.catalogOffConfirm':
+    'عام فہرست مٹا دی جائے گی۔ آپ کی اپنی اشیاء کو کچھ نہیں ہوگا۔',
   'home.backupNever': 'آپ نے ابھی تک بیک اپ محفوظ نہیں کیا۔ محفوظ کرنے کے لیے دبائیں۔',
   'home.backupOld': 'آخری بیک اپ {days} دن پہلے ہوا تھا۔ نیا محفوظ کرنے کے لیے دبائیں۔',
 

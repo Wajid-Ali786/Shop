@@ -51,6 +51,8 @@ export function defaultSettings() {
     theme: 'system',
     // Aakhri backup kab hua (millis). `null` = kabhi nahi.
     lastBackupAt: null,
+    // Grahak wala catalog (bina login ke dikhne wali list) chalu hai ya nahi.
+    publicCatalog: false,
   }
 }
 
@@ -468,6 +470,9 @@ export async function createProduct(input) {
       createdAt: serverTimestamp(),
     })
   }
+
+  // Grahak wali list bhi taza — catalog band ho to ye kuch nahi karta.
+  await syncPublicProduct({ ...input, id: ref.id })
   return ref.id
 }
 
@@ -485,6 +490,8 @@ export async function updateProduct(id, changes) {
     searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
     updatedAt: serverTimestamp(),
   })
+
+  await syncPublicProduct({ ...merged, id })
 }
 
 export async function deleteProduct(id) {
@@ -500,6 +507,8 @@ export async function deleteProduct(id) {
     ops.push((batch) => batch.delete(doc(col('images'), product.imageId)))
   }
   await commitInChunks(ops)
+
+  await removePublicProduct(id)
 }
 
 /**
@@ -741,6 +750,187 @@ export async function seedDefaultCategories() {
   })
   await batch.commit()
   return DEFAULT_CATEGORIES.length
+}
+
+// ---------------------------------------------------------- public catalog
+
+/**
+ * Grahak wala catalog — bina login ke dikhne wali list.
+ *
+ * YE DUKAN KA ASAL DATA NAHI HAI. Har product ki ek chhoti copy alag jagah
+ * (`publicShops/{uid}`) rakhi jati hai jis me sirf wo baatein hoti hain jo
+ * grahak ko dikhani hain: naam, tasveer aur bikri ka rate.
+ *
+ * Jo cheezein YAHAN KABHI NAHI jatin: khareed rate (costPrice), thok rate
+ * (wholesalePrice), stock ki ginti, movements, tags, barcode, supplier.
+ * Firestore me "document ka sirf ek hissa dikhao" mumkin nahi — is liye alag
+ * copy hi waahid mehfooz tareeqa hai. Munafa dukandar ka apna maamla hai.
+ */
+const PUBLIC_INDEX = 'publicIndex'
+
+function publicShopRef(uid = currentUid()) {
+  if (!uid) throw new Error('Sign in nahi kiya hua')
+  return doc(dbf, 'publicShops', uid)
+}
+
+function publicCol(name, uid) {
+  return collection(publicShopRef(uid), name)
+}
+
+/** Ek product ka wo hissa jo grahak dekh sakta hai. */
+function publicShapeOf(product) {
+  return {
+    nameEn: product.nameEn ?? '',
+    nameUr: product.nameUr ?? null,
+    salePrice: product.salePrice ?? 0,
+    // Naap ka lafz (kg / packet) — rate samajhne ke liye zaroori hai.
+    sellBy: product.sellBy ?? 'pack',
+    unit: product.unit ?? null,
+    packLabel: product.packLabel ?? null,
+    packSize: product.packSize ?? null,
+    packUnit: product.packUnit ?? null,
+    imageId: product.imageId ?? null,
+    // Khatam-shuda ya chhupi hui cheez grahak ko nahi dikhni chahiye.
+    hidden: (product.status || 'active') !== 'active',
+  }
+}
+
+/**
+ * Tasveerein bhi alag public copy me jati hain.
+ *
+ * Asal tasveerein `shops/{uid}/images` me hain jo band hai. Public product me
+ * sirf imageId hota hai, aur wo id yahin ki hai — yaani niji collection kabhi
+ * bahar nahi khulti.
+ */
+async function copyPublicImage(imageId, uid) {
+  if (!imageId) return
+  const data = await loadImage(imageId)
+  if (!data) return
+  await setDoc(doc(publicCol('images', uid), imageId), { data })
+}
+
+/** Catalog chalu hai? (Settings ka switch.) */
+export function catalogOn(settings = state.settings) {
+  return settings.publicCatalog === true
+}
+
+/**
+ * Ek product ki public copy taza karna. Catalog band ho to kuch nahi hota.
+ * Nakami jaan boojh kar nigal li jati hai — grahak wali list ka masla
+ * dukandar ka apna kaam nahi rok sakta.
+ */
+export async function syncPublicProduct(product) {
+  if (!catalogOn() || !product?.id) return
+  try {
+    await setDoc(doc(publicCol('products'), product.id), publicShapeOf(product))
+    await copyPublicImage(product.imageId)
+  } catch {
+    // Catalog baad me "dobara shaya karein" se theek ho jata hai.
+  }
+}
+
+export async function removePublicProduct(productId) {
+  if (!catalogOn()) return
+  try {
+    await deleteDoc(doc(publicCol('products'), productId))
+  } catch {
+    // Upar wali wajah.
+  }
+}
+
+/** Poora catalog dobara likhna — switch on karte waqt aur "refresh" par. */
+export async function publishCatalog() {
+  const uid = currentUid()
+  await setDoc(publicShopRef(uid), {
+    shopName: state.settings.shopName || '',
+    currency: state.settings.currency || 'Rs',
+    updatedAt: serverTimestamp(),
+  })
+
+  // Home page ka ishara — pehli dukan jo ise apne naam kare.
+  try {
+    await setDoc(doc(dbf, PUBLIC_INDEX, 'default'), { uid })
+  } catch {
+    // Koi aur dukan pehle claim kar chuki hai — apna catalog phir bhi
+    // `#/shop/{uid}` link se khulta hai.
+  }
+
+  const existing = await getDocs(publicCol('products', uid))
+  const keep = new Set(state.products.map((p) => p.id))
+
+  const ops = []
+  for (const p of state.products) {
+    ops.push((b) => b.set(doc(publicCol('products', uid), p.id), publicShapeOf(p)))
+  }
+  for (const d of existing.docs) {
+    if (!keep.has(d.id)) ops.push((b) => b.delete(d.ref))
+  }
+  await commitInChunks(ops)
+
+  // Tasveerein batch me nahi ja saktin (pehle parhni parti hain).
+  for (const p of state.products) await copyPublicImage(p.imageId, uid)
+
+  return state.products.length
+}
+
+/** Catalog band karna — public copy poori tarah mit jati hai. */
+export async function unpublishCatalog() {
+  const uid = currentUid()
+  const [products, images] = await Promise.all([
+    getDocs(publicCol('products', uid)),
+    getDocs(publicCol('images', uid)),
+  ])
+  await commitInChunks(
+    [...products.docs, ...images.docs].map((d) => (b) => b.delete(d.ref)),
+  )
+  await deleteDoc(publicShopRef(uid)).catch(() => {})
+}
+
+/**
+ * Grahak wali list parhna — bina login ke.
+ *
+ * Ye waahid jagah hai jahan store bina sign-in ke Firestore se baat karta hai,
+ * is liye `shopRef()` ke bajaye seedha path banta hai.
+ */
+export async function loadPublicShop(uid) {
+  if (!uid) return null
+  const [shopSnap, productSnap] = await Promise.all([
+    getDoc(doc(dbf, 'publicShops', uid)),
+    getDocs(collection(doc(dbf, 'publicShops', uid), 'products')),
+  ])
+  if (!shopSnap.exists()) return null
+
+  const products = productSnap.docs
+    .map((d) => ({ ...d.data(), id: d.id }))
+    .filter((p) => !p.hidden)
+    .sort((a, b) => String(a.nameEn).localeCompare(String(b.nameEn)))
+
+  return { uid, ...shopSnap.data(), products }
+}
+
+/** Public tasveer — grahak wali list ke liye. */
+export async function loadPublicImage(uid, imageId) {
+  if (!uid || !imageId) return null
+  const key = `pub:${uid}:${imageId}`
+  if (imageCache.has(key)) return imageCache.get(key)
+  try {
+    const snap = await getDoc(doc(collection(doc(dbf, 'publicShops', uid), 'images'), imageId))
+    const data = snap.exists() ? snap.data().data : null
+    imageCache.set(key, data)
+    return data
+  } catch {
+    return null
+  }
+}
+
+/** Home page kis dukan ka catalog dikhaye. */
+export async function defaultPublicShopUid() {
+  try {
+    const snap = await getDoc(doc(dbf, PUBLIC_INDEX, 'default'))
+    return snap.exists() ? snap.data().uid : null
+  } catch {
+    return null
+  }
 }
 
 // ------------------------------------------------------------------ export

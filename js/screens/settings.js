@@ -1,12 +1,21 @@
 import { esc, escAttr, on, toast, $ } from '../lib/dom.js'
 import { t, getLang, setLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, saveSetting, buildExport, restoreExport, isValidExport } from '../store.js'
+import {
+  state,
+  saveSetting,
+  buildExport,
+  restoreExport,
+  isValidExport,
+  catalogOn,
+  publishCatalog,
+  unpublishCatalog,
+} from '../store.js'
 import { appBar, field, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
 import { currentEmail, signOut } from '../firebase.js'
 import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
-import { chooseModal, alertModal } from '../lib/modal.js'
+import { chooseModal, alertModal, confirmModal } from '../lib/modal.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -77,6 +86,28 @@ export function renderSettings(root, rerender) {
              </button>
              <input type="file" accept="application/json,.json" id="restore-file" hidden>
              <p class="small muted" style="margin-top:12px">${esc(t('settings.restoreDesc'))}</p>
+           </div>`,
+        )}
+
+        ${section(
+          t('settings.catalog'),
+          `<div class="card">
+             <p class="small muted" style="margin-bottom:12px">${esc(t('settings.catalogDesc'))}</p>
+             <div class="choices choices--2" style="margin-bottom:10px">
+               <button class="choice${catalogOn(settings) ? ' choice--active' : ''}" data-catalog="on">
+                 ${esc(t('settings.catalogOn'))}
+               </button>
+               <button class="choice${catalogOn(settings) ? '' : ' choice--active'}" data-catalog="off">
+                 ${esc(t('settings.catalogOff'))}
+               </button>
+             </div>
+             <p class="field__hint">${esc(t('settings.catalogSafety'))}</p>
+             ${
+               catalogOn(settings)
+                 ? `<button class="btn btn--secondary btn--full btn--sm" data-republish
+                      style="margin-top:12px">🔄 ${esc(t('settings.catalogRepublish'))}</button>`
+                 : ''
+             }
            </div>`,
         )}
 
@@ -210,6 +241,59 @@ export function renderSettings(root, rerender) {
       })
     } catch {
       toast(t('error.generic'))
+    }
+  })
+
+  // ---- grahak wala catalog ----
+  on(root, 'click', '[data-catalog]', async (_e, el) => {
+    const turnOn = el.dataset.catalog === 'on'
+    if (turnOn === catalogOn(state.settings)) return
+
+    if (!turnOn) {
+      const ok = await confirmModal({
+        title: t('settings.catalog'),
+        message: t('settings.catalogOffConfirm'),
+        confirmLabel: t('settings.catalogOff'),
+        danger: true,
+      })
+      if (!ok) return
+    }
+
+    el.disabled = true
+    toast(t('settings.catalogWorking'))
+    try {
+      // Switch pehle likhte hain, warna publishCatalog() ko catalog band lagta.
+      await saveSetting('publicCatalog', turnOn)
+      if (turnOn) {
+        const count = await publishCatalog()
+        await alertModal({
+          title: t('settings.catalog'),
+          message: t('settings.catalogPublished', { count }),
+        })
+      } else {
+        await unpublishCatalog()
+        toast(t('common.done'))
+      }
+    } catch (err) {
+      await saveSetting('publicCatalog', !turnOn).catch(() => {})
+      toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
+    } finally {
+      rerender()
+    }
+  })
+
+  on(root, 'click', '[data-republish]', async (_e, el) => {
+    el.disabled = true
+    try {
+      const count = await publishCatalog()
+      await alertModal({
+        title: t('settings.catalog'),
+        message: t('settings.catalogPublished', { count }),
+      })
+    } catch (err) {
+      toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
+    } finally {
+      el.disabled = false
     }
   })
 
