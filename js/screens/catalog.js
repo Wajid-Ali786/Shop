@@ -83,7 +83,6 @@ export function renderCatalog(root, uid, rerender) {
 
   const shop = cache
   const visible = filterProducts(shop)
-  const currency = shop.currency || 'Rs'
 
   root.innerHTML = `
     <div class="screen catalog">
@@ -116,7 +115,7 @@ export function renderCatalog(root, uid, rerender) {
              ${categoryChips(shop)}
 
              <div class="row row--between pad" style="padding-top:4px;padding-bottom:4px">
-               <span class="tiny muted">${esc(t('products.count', { count: visible.length }))}</span>
+               <span class="tiny muted" id="c-count">${esc(t('products.count', { count: visible.length }))}</span>
                <button class="chip${ui.inStockOnly ? ' chip--active' : ''}" data-instock>
                  ${esc(t('catalog.inStockOnly'))}
                </button>
@@ -124,27 +123,10 @@ export function renderCatalog(root, uid, rerender) {
           : ''
       }
 
-      <div class="pad" style="padding-top:0">
-        ${
-          visible.length
-            ? `<ul class="pgrid">${visible.map((p) => card(p, currency)).join('')}</ul>
-               ${
-                 shop.cursor
-                   ? `<div class="morebar" data-more-sentinel>
-                        <button class="btn btn--secondary btn--full" data-show-more>
-                          ${esc(t('catalog.showMore'))}
-                        </button>
-                      </div>`
-                   : ''
-               }`
-            : shop.products.length
-              ? empty('🔍', t('products.noResults', { query: ui.query }), '')
-              : empty('🏪', t('catalog.empty'), t('catalog.emptyHint'))
-        }
-      </div>
+      <div class="pad" style="padding-top:0" id="c-results">${resultsHtml(shop, visible)}</div>
     </div>`
 
-  wireDragScroll(root)
+  afterList(root, uid, rerender)
 
   on(root, 'click', '[data-lang]', (_e, el) => setLang(el.dataset.lang))
   on(root, 'click', '[data-go]', (_e, el) => navigate(el.dataset.go))
@@ -171,17 +153,39 @@ export function renderCatalog(root, uid, rerender) {
       timer = setTimeout(() => {
         // Talash poore maal par honi chahiye, sirf us par nahi jo aa chuka hai.
         if (ui.query.trim() && cache?.cursor) fetchMore(uid, rerender, true)
-        rerender()
-        const next = root.querySelector('#cq')
-        if (next) {
-          next.focus()
-          next.setSelectionRange(next.value.length, next.value.length)
-        }
+        refreshList(root, uid, rerender)
       }, 180)
     })
   }
 
-  // Neeche pahunchte hi agla safha khud aa jata hai.
+}
+
+/**
+ * Sirf list ka hissa dobara banata hai — search box waisa hi rehta hai.
+ *
+ * Wahi wajah jo dukandar wali list me hai: poori screen dobara banane par jis
+ * khane me grahak likh raha hota hai wo hi naya ban jata tha, focus toot jata
+ * aur keyboard band ho jata.
+ */
+function refreshList(root, uid, rerender) {
+  const area = root.querySelector('#c-results')
+  if (!area) return rerender()
+
+  const shop = cache
+  if (!shop) return rerender()
+
+  const visible = filterProducts(shop)
+  area.innerHTML = resultsHtml(shop, visible)
+
+  const count = root.querySelector('#c-count')
+  if (count) count.textContent = t('products.count', { count: visible.length })
+
+  afterList(root, uid, rerender)
+}
+
+/** Har dafa nayi rows aane ke baad ka kaam. */
+function afterList(root, uid, rerender) {
+  wireDragScroll(root)
   autoLoadMore(root, () => fetchMore(uid, rerender))
 
   // Tasveerein baad me — list foran nazar aani chahiye.
@@ -193,6 +197,29 @@ export function renderCatalog(root, uid, rerender) {
       el.innerHTML = `<img src="${escAttr(data)}" alt="" loading="lazy">`
     })
   }
+}
+
+/** List ka andar ka hissa — render aur refresh dono yehi likhte hain. */
+function resultsHtml(shop, visible) {
+  const currency = shop.currency || 'Rs'
+
+  if (!visible.length) {
+    return shop.products.length
+      ? empty('🔍', t('products.noResults', { query: ui.query }), '')
+      : empty('🏪', t('catalog.empty'), t('catalog.emptyHint'))
+  }
+
+  return `
+    <ul class="pgrid">${visible.map((p) => card(p, currency)).join('')}</ul>
+    ${
+      shop.cursor
+        ? `<div class="morebar" data-more-sentinel>
+             <button class="btn btn--secondary btn--full" data-show-more>
+               ${esc(t('catalog.showMore'))}
+             </button>
+           </div>`
+        : ''
+    }`
 }
 
 function filterProducts(shop) {
