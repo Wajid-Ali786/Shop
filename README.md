@@ -20,7 +20,7 @@ Us ke bagair app sirf "Firebase setup needed" wali screen dikhayegi.
 
 ## Features
 
-- **Products** — tasveer (camera se), froukht/khareed/thok qeemat, categories,
+- **Products** — tasveer (camera se), bechne aur khareedne ka rate, categories,
   miyaad ki tareekh, barcode
 - **Khuli ya packet** — har product ke liye tay karein ke wo tol kar bikti hai
   ya gin kar. Cold drink 1.5L par stock `6` likhein to **"6 bottle"** aata hai,
@@ -45,6 +45,15 @@ Us ke bagair app sirf "Firebase setup needed" wali screen dikhayegi.
 - **Dark mode**
 - **Har phone se** — apne email/password se kisi bhi device par login karein
 - **Account controls** — Settings me se email aur password khud badal sakte hain
+- **Grahak wali fehrist** — chaahein to site kholne wale ko bina login ke
+  sirf tasveer, naam, rate aur stock dikha sakte hain. Khareed rate, chhupe
+  tags aur stock history kabhi baahar nahi jaate
+- **Backup** — poora data (tasveerein samet) ek file me; wapas laane par
+  "shamil karein" ya "sab badal dein" ka ikhtiyar. Muqarrara din guzarne par
+  home screen khud yaad dilati hai
+- **Phone par install** — Settings se home screen par apna icon; app poori
+  screen par khulti hai aur internet ke baghair bhi chalti hai
+- **Upar se kheench kar taza** — jaise doosri apps me hota hai
 
 ---
 
@@ -80,8 +89,10 @@ js/
   app.js                routing aur screens jorne wala hissa
   components.js         chhote reusable HTML tukde
   i18n/                 English + Urdu
-  lib/                  search, units, format, images, router, theme, dom
-  screens/              login, dashboard, products, form, detail, stock, categories, settings
+  lib/                  search, units, format, images, router, theme, dom,
+                        backup, install, paging, pull-refresh, dragscroll, modal
+  screens/              welcome, catalog, login, account, dashboard, products,
+                        form, detail, stock, categories, settings
 ```
 
 Firestore ko koi screen seedha nahi chhuti — sab kuch `js/store.js` se guzarta hai.

@@ -149,7 +149,6 @@ alag copy banti hai jis me sirf wo chaar cheezein hoti hain. In ka is copy tak
 koi raasta hi nahi:
 
 - khareed rate (cost price)
-- thok rate (wholesale price)
 - stock ki poori history (movements)
 - chhupe hue search tags, barcode, brand
 
