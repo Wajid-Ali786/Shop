@@ -43,8 +43,36 @@ let seeded = false
  * site kholta (catalog abhi band), phir login kar ke catalog CHALU karta aur
  * sign out karta, to app dobara poochti hi nahi thi aur welcome screen par
  * atki rehti. Sirf page reload se theek hota tha.
+ *
+ * Shuru me jawab browser se aata hai (neeche dekhein), server se nahi.
  */
-let publicShop = { uid: null, checked: false, asking: false }
+let publicShop = { uid: cachedPublicShopUid(), checked: false, asking: false }
+
+/**
+ * Pichhli baar kaun sa catalog mila tha — browser me mehfooz.
+ *
+ * Is ke baghair do me se ek kharabi laazmi thi: ya to jawab aane se pehle
+ * welcome screen likh dete (aur har reload par wo jhalakta, phir products
+ * aate), ya jawab tak spinner dikhate (aur jis dukan ka catalog hai hi nahi
+ * us ka visitor teen second khali screen dekhta). Yaad rakhne se dono khatam:
+ * pehli visit par foran welcome, us ke baad foran catalog.
+ */
+function cachedPublicShopUid() {
+  try {
+    return localStorage.getItem('karyana.publicShopUid') || null
+  } catch {
+    return null // private mode
+  }
+}
+
+function rememberPublicShopUid(uid) {
+  try {
+    if (uid) localStorage.setItem('karyana.publicShopUid', uid)
+    else localStorage.removeItem('karyana.publicShopUid')
+  } catch {
+    // Private mode — sirf is session ke liye chalega.
+  }
+}
 /** Maujooda screen ka cleanup (Firestore listeners band karne ke liye). */
 let cleanupScreen = null
 
@@ -73,7 +101,9 @@ if (!isConfigured()) {
       // Sign out ke baad catalog dobara mangwao — dukandar ne is dauran
       // products badle ho sakte hain, ya catalog abhi abhi chalu kiya ho.
       resetCatalog()
-      publicShop = { uid: null, checked: false, asking: false }
+      // Yaad rakha hua catalog phenkte nahi — warna sign out ke foran baad
+      // welcome jhalakta aur phir products aate. Sirf dobara poochte hain.
+      publicShop = { uid: cachedPublicShopUid(), checked: false, asking: false }
       // Sign out ke baad andar wale route par mat atko — home page par le jao.
       if (currentPath() !== '/') navigate('/')
     }
@@ -142,17 +172,10 @@ function render() {
       askPublicShop()
     }
 
-    // Jawab aane tak INTEZAR — welcome screen nahi.
-    //
-    // Pehle yahan seedha welcome likh diya jata tha aur jawab aane par catalog
-    // aata tha. Nateeja ye ke har reload par pehle welcome jhalakta tha aur
-    // phir products — jaise app do dafa khul rahi ho.
-    if (!publicShop.checked) {
-      root.innerHTML = loading()
-      return
-    }
-
-    // Poochh liya, koi catalog nahi mila — sada welcome screen.
+    // Yahan pahunchne ka matlab: browser ko koi catalog yaad nahi. Us soorat
+    // me intezar karwana ghalat hai — jis site par catalog hai hi nahi, wahan
+    // har visitor khali screen dekhta rehta. Welcome foran dikha dete hain;
+    // jawab me catalog nikla to wo khud lag jayega (aur agli dafa foran).
     renderWelcome(root)
     return
   }
@@ -201,30 +224,18 @@ function render() {
  * catalog khud lag jata hai.
  */
 function askPublicShop() {
-  let settled = false
-  const settle = (uid) => {
-    if (settled) return
-    settled = true
-    publicShop = { uid: uid || null, checked: true, asking: false }
-    render()
-  }
-
-  const giveUp = setTimeout(() => settle(null), 3000)
-
   defaultPublicShopUid()
     .then((uid) => {
-      clearTimeout(giveUp)
-      // Waqt guzar chuka ho aur jawab me dukan mili ho to ab bhi laga dete hain.
-      if (settled && uid) {
-        publicShop = { uid, checked: true, asking: false }
-        render()
-        return
-      }
-      settle(uid)
+      const changed = uid !== publicShop.uid
+      publicShop = { uid: uid || null, checked: true, asking: false }
+      rememberPublicShopUid(uid)
+      // Sirf tab dobara banate hain jab jawab pehle wali halat se alag ho —
+      // warna har boot par ek bay-wajah render hota.
+      if (changed) render()
     })
     .catch(() => {
-      clearTimeout(giveUp)
-      settle(null)
+      // Internet na ho to jo yaad tha wahi chalta rahe.
+      publicShop = { ...publicShop, checked: true, asking: false }
     })
 }
 

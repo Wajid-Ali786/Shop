@@ -127,7 +127,8 @@ export function stockBadge(p) {
  */
 export function packBadge(product) {
   const size = formatPackSizeShort(product)
-  return size ? `<span class="packbadge">${esc(size)}</span>` : ''
+  // dir="ltr" ke baghair Urdu me "2 L" ulat kar "L 2" ban jata hai.
+  return size ? `<span class="packbadge" dir="ltr">${esc(size)}</span>` : ''
 }
 
 /**
@@ -307,11 +308,18 @@ export function movementRow(movement, product, productName = '') {
       <div class="mrow__body">
         ${productName ? `<p class="small bold truncate">${esc(productName)}</p>` : ''}
         <p class="small">${esc(t(`reason.${movement.reason}`))}</p>
-        <p class="tiny muted">${esc(movement.when)}${movement.note ? ` · ${esc(movement.note)}` : ''}</p>
+        <p class="tiny muted"><span dir="ltr">${esc(movement.when)}</span>${movement.note ? ` · ${esc(movement.note)}` : ''}</p>
       </div>
       <div class="mrow__qty">
-        <p class="small bold">${isAdjust ? '' : sign}${esc(formatQty(movement.qty, product, unitLabel))}</p>
-        <p class="tiny faint">→ ${esc(formatQty(movement.balanceAfter, product, unitLabel))}</p>
+        <!--
+          dir="ltr" lazmi hai. Urdu me poori screen RTL hoti hai, aur us me
+          "+9 پیکٹ" jaisi mili juli line browser ulat kar "9+ پیکٹ" bana deta
+          tha — jama ka nishan adad ke ghalat taraf. Yehi baat waqt ke saath
+          bhi hoti thi ("4:33 AM" se "AM 4:33"). Ye tukra baqi jumle se alag
+          rehna chahiye.
+        -->
+        <p class="small bold" dir="ltr">${isAdjust ? '' : sign}${esc(formatQty(movement.qty, product, unitLabel))}</p>
+        <p class="tiny faint" dir="ltr">→ ${esc(formatQty(movement.balanceAfter, product, unitLabel))}</p>
       </div>
     </li>`
 }

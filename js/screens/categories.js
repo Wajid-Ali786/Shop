@@ -191,21 +191,7 @@ export function renderCategories(root) {
     }
   })
 
-  on(root, 'click', '[data-del]', async (_e, el) => {
-    const ok = await confirmModal({
-      title: t('common.delete'),
-      message: t('categories.deleteConfirm'),
-      confirmLabel: t('common.delete'),
-      danger: true,
-    })
-    if (!ok) return
-    try {
-      await deleteCategory(el.dataset.del)
-      toast(t('common.done'))
-    } catch (err) {
-      toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
-    }
-  })
+
 }
 
 function normalRow(cat, counts) {
@@ -218,8 +204,7 @@ function normalRow(cat, counts) {
           <p class="tiny muted">${esc(t('categories.productCount', { count: counts.get(cat.id) || 0 }))}</p>
         </div>
       </button>
-      <button class="icon-btn icon-btn--danger" data-del="${escAttr(cat.id)}"
-        aria-label="${escAttr(t('common.delete'))}">${icon('trash')}</button>
+      ${icon('chevron', 'flip')}
     </li>`
 }
 
@@ -289,7 +274,16 @@ function openEditor(category) {
       )}
 
       <div id="cat-error"></div>
-      <button class="btn btn--primary btn--full" id="cat-save">${esc(t('common.save'))}</button>`
+      <button class="btn btn--primary btn--full" id="cat-save">${esc(t('common.save'))}</button>
+
+      ${
+        isNew
+          ? ''
+          : `<button class="btn btn--ghost btn--full" id="cat-delete"
+               style="color:var(--danger);margin-top:10px">
+               ${esc(t('categories.delete'))}
+             </button>`
+      }`
 
     body.querySelectorAll('[data-icon]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -299,6 +293,31 @@ function openEditor(category) {
           b.setAttribute('aria-pressed', String(b.dataset.icon === selectedIcon))
         })
       })
+    })
+
+    /*
+     * Delete category ke apne sheet me hai, list me nahi.
+     *
+     * Pehle har row par laal trash ka nishan tha — barah categories par barah
+     * laal nishan, aur poora kaam ek ghalat tap ki doori par. Category delete
+     * karna rozana ka kaam nahi hai; usay khol kar karna hi theek hai. Row par
+     * tap karne se ab sirf editor khulta hai.
+     */
+    $('#cat-delete', body)?.addEventListener('click', async () => {
+      const ok = await confirmModal({
+        title: t('common.delete'),
+        message: t('categories.deleteConfirm'),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
+      if (!ok) return
+      try {
+        await deleteCategory(category.id)
+        closeSheet()
+        toast(t('common.done'))
+      } catch (err) {
+        toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
+      }
     })
 
     const saveBtn = $('#cat-save', body)

@@ -233,7 +233,7 @@ function card(p, currency) {
         <div class="gcard__main" style="cursor:default">
           <div class="gcard__thumb">${
             p.imageId ? `<span data-pubimage="${escAttr(p.imageId)}">📦</span>` : '📦'
-          }${packSize ? `<span class="packbadge">${esc(packSize)}</span>` : ''}</div>
+          }${packSize ? `<span class="packbadge" dir="ltr">${esc(packSize)}</span>` : ''}</div>
           <p class="gcard__name" dir="auto">${esc(localizedName(p))}</p>
           <p class="gcard__price">
             <span class="price">${esc(formatMoney(p.salePrice, currency))}</span>

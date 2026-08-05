@@ -4,7 +4,6 @@ import { navigate } from '../lib/router.js'
 import {
   state,
   saveSetting,
-  buildExport,
   restoreExport,
   isValidExport,
   catalogOn,
@@ -18,6 +17,7 @@ import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
 import { currentEmail, signOut } from '../firebase.js'
 import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
 import { chooseModal, alertModal, confirmModal } from '../lib/modal.js'
+import { runBackup } from '../lib/backup.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -180,31 +180,7 @@ export function renderSettings(root, rerender) {
 
   // ---- export ----
   on(root, 'click', '[data-export]', async (_e, el) => {
-    el.disabled = true
-    try {
-      // Tasveerein aur poori movements server se aati hain, is liye await.
-      const data = await buildExport()
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const stamp = new Date().toISOString().slice(0, 10)
-      a.download = `karyana-${stamp}.json`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-
-      // Backup ki tareekh yaad rakhte hain — isi se yaad-dihani band hoti hai.
-      // File banne ke BAAD likhi jati hai, warna nakam export bhi "ho gaya"
-      // gina jata.
-      await saveSetting('lastBackupAt', Date.now())
-      toast(t('settings.exported'))
-    } catch {
-      toast(t('error.generic'))
-    } finally {
-      el.disabled = false
-    }
+    await runBackup(el)
   })
 
   // ---- restore ----

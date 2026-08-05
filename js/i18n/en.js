@@ -298,6 +298,7 @@ export const en = {
   'categories.empty': 'No categories yet',
   'categories.deleteConfirm':
     'Delete this category? Its products stay — they just become uncategorized.',
+  'categories.delete': 'Delete this category',
   'categories.restoreDefaults': 'Add default categories',
   'categories.duplicate': 'A category called “{name}” already exists',
   'categories.alreadyThere': '“{name}” already existed — ticked it for you',
