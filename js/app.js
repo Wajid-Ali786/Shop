@@ -16,6 +16,7 @@ import {
   defaultPublicShopUid,
 } from './store.js'
 import { bottomNav, NAV_PATHS, loading } from './components.js'
+import { enablePullRefresh } from './lib/pull-refresh.js'
 
 import { renderWelcome } from './screens/welcome.js'
 import { renderCatalog, resetCatalog } from './screens/catalog.js'
@@ -96,6 +97,20 @@ if (!isConfigured()) {
   onLangChange(render)
   window.addEventListener('online', render)
   window.addEventListener('offline', render)
+
+  /*
+   * Upar se kheench kar taza karna.
+   *
+   * Firestore ke listeners khud data laate rehte hain, is liye ye aksar kuch
+   * naya nahi lata — aur yehi maqsad hai. Internet aane jane ke baad dukandar
+   * ko tasalli chahiye hoti hai ke jo dikh raha hai wo taza hai. Sync dobara
+   * shuru karne se cache aur server phir mil jate hain.
+   */
+  enablePullRefresh(async () => {
+    if (signedIn) startSync()
+    await new Promise((r) => setTimeout(r, 600))
+    render()
+  })
 }
 
 // ----------------------------------------------------------------- render

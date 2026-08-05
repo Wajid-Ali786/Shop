@@ -38,13 +38,36 @@ export function $$(selector, root = document) {
  * kare us par chalta hai. Is se har render par listeners dobara lagane ki
  * zaroorat nahi parti.
  */
+/**
+ * Delegated event — root par ek listener, andar ke elements ke liye.
+ *
+ * Wahi root + type + selector dobara aane par PURANA hata diya jata hai.
+ *
+ * Is ke baghair ek sanjeeda bug tha: kuch screens (jaise product detail) apne
+ * hi root me baar baar dobara banti hain — jab Firestore ka naya snapshot aata
+ * hai. Har dafa wahi handler dobara lag jata tha, aur listener jamā hote rehte.
+ * Nateeja: back ek dafa dabane par `history.back()` do teen dafa chalta tha aur
+ * dukandar products ki jagah Settings par pahunch jata tha. Yehi baat delete
+ * aur stock wale buttons par bhi lagti thi — wo bhi kai baar chalte the.
+ */
 export function on(root, type, selector, handler) {
+  const key = `${type}|${selector}`
+  if (!root.__delegated) root.__delegated = new Map()
+
+  const previous = root.__delegated.get(key)
+  if (previous) root.removeEventListener(type, previous)
+
   const listener = (event) => {
     const target = event.target.closest(selector)
     if (target && root.contains(target)) handler(event, target)
   }
+  root.__delegated.set(key, listener)
   root.addEventListener(type, listener)
-  return () => root.removeEventListener(type, listener)
+
+  return () => {
+    root.removeEventListener(type, listener)
+    if (root.__delegated.get(key) === listener) root.__delegated.delete(key)
+  }
 }
 
 /** Chhota toast neeche se. */

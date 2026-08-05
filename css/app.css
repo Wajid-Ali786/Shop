@@ -615,12 +615,14 @@ input[type='checkbox'] {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* Pakar kar khisakne ka ishara — aur khisakte waqt text select na ho. */
-.catchips,
-.chips,
-.tagideas__row {
-  cursor: grab;
-}
+/*
+ * Khisakna chalta hai, magar us ka koi ishara nazar nahi aata.
+ *
+ * Pehle yahan `cursor: grab` tha. Us se har chip par maus le jate hi haath
+ * wala nishan aa jata tha — jaise chip ko uthaya ja sakta ho. Chips to dabane
+ * ke liye hain, uthane ke liye nahi; wo nishan sirf uljhan paida karta tha.
+ * Khisakne ki soorat me hi cursor badalta hai.
+ */
 .catchips.dragging,
 .chips.dragging,
 .tagideas__row.dragging {
@@ -675,6 +677,62 @@ input[type='checkbox'] {
 .screen--form .field:last-child {
   margin-bottom: 0;
 }
+/*
+ * Form ke khane — halka bhara hua andaz, khali dabbon jaisa nahi.
+ *
+ * Dukandar ki shikayat theek thi: screen "form" lagti thi. Saada border wala
+ * khana kaghaz ke form jaisa lagta hai; app me khana thora bhara hua hota hai
+ * aur haath lagate hi ubhar aata hai. Sirf form ki screen par, taake baqi app
+ * ka andaz na badle.
+ */
+.screen--form input,
+.screen--form select,
+.screen--form textarea {
+  border-color: transparent;
+  background: var(--bg);
+  padding: 13px 14px;
+}
+.screen--form input:focus,
+.screen--form select:focus,
+.screen--form textarea:focus {
+  background: var(--surface);
+  border-color: var(--brand);
+}
+:root.dark .screen--form input,
+:root.dark .screen--form select,
+:root.dark .screen--form textarea {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/*
+ * "Packet ya khula" ek hi patti me — do alag buttons nahi.
+ *
+ * Ye ek hi sawal ke do jawab hain, is liye ek hi dabbe me hone chahiyen.
+ * Alag alag buttons se lagta tha ke do mukhtalif kaam hain.
+ */
+.screen--form .choices--2 {
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+:root.dark .screen--form .choices--2 {
+  background: rgba(255, 255, 255, 0.04);
+}
+.screen--form .choices--2 .choice {
+  border-color: transparent;
+  background: transparent;
+}
+.screen--form .choices--2 .choice--active {
+  background: var(--surface);
+  color: var(--brand-text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+:root.dark .screen--form .choices--2 .choice--active {
+  background: var(--surface);
+  box-shadow: none;
+}
+
 /* Har card ke upar chhota sa unwan — form ek nazar me parha ja sake. */
 .formhead {
   margin: 0 0 10px;
@@ -685,34 +743,94 @@ input[type='checkbox'] {
   color: var(--text-faint);
 }
 
-/* Tasveer ka hissa — thumb aur buttons ek hi qatar me, bina alag label ke. */
-.photorow {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
+/*
+ * Tasveer ka tile.
+ *
+ * Poori chaurai ka ek hissa, na ke thumb aur buttons ki qatar. Khali halat me
+ * andar hi bata deta hai ke karna kya hai; tasveer lagne par wo poore tile par
+ * phail jati hai aur buttons chhote ho kar upar tair jate hain.
+ */
+.photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 180px;
   margin-bottom: 14px;
-}
-.thumb--pick {
-  width: 76px;
-  height: 76px;
-  flex-shrink: 0;
-  font-size: 1.9rem;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
   background: var(--bg);
-  cursor: pointer;
   overflow: hidden;
 }
-.photorow__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+.photo--filled {
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--border);
 }
-.photorow__actions .btn--sm {
-  flex: 1;
-  min-width: 110px;
+.photo__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+}
+.photo__icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.photo__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.photo__buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.photo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Buttons tasveer ke oopar — halka sa saaya taake har tasveer par parhe jayen. */
+.photo__over {
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.photo__pill,
+.photo__x {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+}
+.photo__pill {
+  min-height: 34px;
+  padding-inline: 14px;
+}
+.photo__x {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+.photo__x:active,
+.photo__pill:active {
+  background: rgba(15, 23, 42, 0.9);
 }
 
 /*
@@ -981,6 +1099,58 @@ input[type='checkbox'] {
   backdrop-filter: blur(2px);
   pointer-events: none;
 }
+/*
+ * Doosre kone ka nishan — expiry ya "band ho chuki".
+ *
+ * Rang se hi baat ho jaye: laal matlab kaam ki nahi rahi, peela matlab jaldi
+ * karo. Naam ke saath likhne ke bajaye yahan hai taake nazar tasveer par
+ * partay hi pata chal jaye.
+ */
+.cornerbadge {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 4px;
+  z-index: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.4;
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.cornerbadge--danger {
+  background: var(--danger);
+}
+.cornerbadge--warn {
+  background: var(--warn);
+}
+/*
+ * List wale chhote thumb (56px) par pill nahi samati — "Expired" thumb se
+ * chaura hai aur bahar latak jata hai. Wahan neeche ek patti bana dete hain
+ * jo poori chaurai le leti hai aur jaan boojh kar lagti hai.
+ */
+.thumbwrap .cornerbadge {
+  inset-block-start: auto;
+  inset-block-end: 0;
+  inset-inline: 0;
+  padding: 1px 2px;
+  border-radius: 0;
+  font-size: 0.55rem;
+  line-height: 1.5;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.gcard__thumb .cornerbadge {
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+}
+
 /* Grid ki bari tasveer par thora bara nishan. */
 .gcard__thumb .packbadge {
   inset-block-start: 6px;
@@ -1838,4 +2008,48 @@ input[type='checkbox'] {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* "Aur dikhayein" ka hissa — yehi wo nishan hai jise dekh kar agla tukra aata hai. */
+.morebar {
+  padding: 0 16px 16px;
+}
+
+/*
+ * Kheench kar taza karne wala nishan.
+ *
+ * Screen ke bilkul upar chhupa rehta hai aur ungli ke saath neeche aata hai.
+ */
+.pullrefresh {
+  position: fixed;
+  top: -44px;
+  inset-inline: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  pointer-events: none;
+}
+.pullrefresh--snap {
+  transition: transform 0.2s ease-out;
+}
+.pullrefresh__spin {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+}
+/* Kaafi kheench liya — ab chhorne par chalega. */
+.pullrefresh--ready .pullrefresh__spin {
+  border-color: var(--brand-light);
+  border-top-color: var(--brand);
+  transform: rotate(180deg);
+  transition: transform 0.15s;
+}
+.pullrefresh--busy .pullrefresh__spin {
+  animation: spin 0.7s linear infinite;
 }
