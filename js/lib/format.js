@@ -31,6 +31,15 @@ export function formatDateTime(ts, lang = 'en') {
 }
 
 /** Aaj se kitne din baad (manfi = guzar chuka). Expiry alerts ke liye. */
+/**
+ * Itne din pehle "jald khatam ho rahi hai" ka nishan lagna shuru hota hai.
+ *
+ * Ye yahan rehta hai, stock screen me nahi, kyunki ab isay product cards bhi
+ * istemaal karte hain — do jagah do alag adad hone se list aur stock screen
+ * ek doosre se ulti baat kehte.
+ */
+export const EXPIRY_WARNING_DAYS = 30
+
 export function daysUntil(isoDate) {
   const target = new Date(`${isoDate}T00:00:00`)
   if (Number.isNaN(target.getTime())) return Infinity

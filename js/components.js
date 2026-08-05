@@ -4,7 +4,7 @@
  */
 import { esc, escAttr } from './lib/dom.js'
 import { t, unitLabel, localizedName } from './i18n/index.js'
-import { formatMoney } from './lib/format.js'
+import { formatMoney, daysUntil, EXPIRY_WARNING_DAYS } from './lib/format.js'
 import { formatQty, formatPackSizeShort, priceUnitLabel } from './lib/units.js'
 
 // ------------------------------------------------------------------ icons
@@ -131,6 +131,37 @@ export function packBadge(product) {
 }
 
 /**
+ * Doosre kone ka nishan — wo baat jo dukandar ko FORAN pata honi chahiye.
+ *
+ * Wahi soch jo "2 L" wale nishan ke peeche hai: jo cheez ek nazar me dikhni
+ * chahiye wo tasveer par honi chahiye, naam ke neeche likhi tafseel me nahi.
+ * Expiry ki tareekh pehle sirf Stock screen par nazar aati thi — halanke doodh
+ * aur bread bechne wale ko wo products ki list me chahiye hoti hai.
+ *
+ * Ek waqt me sirf ek nishan, is tarteeb se: khatam ho chuki > jald khatam >
+ * band ho chuki > chhupi hui. Do teen nishan ek saath lagane se tasveer hi
+ * dhak jati hai aur koi bhi baat nahi pahunchti.
+ */
+export function alertBadge(product) {
+  if (product.expiryDate) {
+    const days = daysUntil(product.expiryDate)
+    if (days < 0) {
+      return `<span class="cornerbadge cornerbadge--danger">${esc(t('badge.expired'))}</span>`
+    }
+    if (days <= EXPIRY_WARNING_DAYS) {
+      return `<span class="cornerbadge cornerbadge--warn">${esc(t('badge.expiresIn', { days }))}</span>`
+    }
+  }
+  if (product.status === 'discontinued') {
+    return `<span class="cornerbadge cornerbadge--danger">${esc(t('badge.ended'))}</span>`
+  }
+  if (product.status === 'hidden') {
+    return `<span class="cornerbadge">${esc(t('products.inactive'))}</span>`
+  }
+  return ''
+}
+
+/**
  * Badge thumb ke BAHAR baithta hai, andar nahi.
  *
  * Tasveer baad me `fillImages()` bharta hai aur wo thumb ka andar ka hissa
@@ -138,7 +169,7 @@ export function packBadge(product) {
  */
 function thumb(product, fallback, big = false) {
   const cls = big ? 'thumb thumb--lg' : 'thumb'
-  const badge = packBadge(product)
+  const badges = packBadge(product) + alertBadge(product)
 
   let inner
   if (product.image) {
@@ -149,8 +180,8 @@ function thumb(product, fallback, big = false) {
     inner = `<div class="${cls}">${esc(fallback || '📦')}</div>`
   }
 
-  if (!badge) return inner
-  return `<div class="thumbwrap">${inner}${badge}</div>`
+  if (!badges) return inner
+  return `<div class="thumbwrap">${inner}${badges}</div>`
 }
 
 export function productCard(product, { categoryIcon, currency }) {
@@ -159,10 +190,7 @@ export function productCard(product, { categoryIcon, currency }) {
       <button class="pcard__main" data-open="${escAttr(product.id)}">
         ${thumb(product, categoryIcon)}
         <div style="min-width:0;flex:1">
-          <div class="row" style="gap:6px">
-            <p class="bold truncate">${esc(localizedName(product))}</p>
-            ${statusBadge(product)}
-          </div>
+          <p class="bold truncate">${esc(localizedName(product))}</p>
           ${product.brand ? `<p class="small muted truncate">${esc(product.brand)}</p>` : ''}
           <p class="small" style="margin-top:2px">
             <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
@@ -183,17 +211,6 @@ export function productCard(product, { categoryIcon, currency }) {
  * Badge par tap karne se poora sheet khulta hai jahan miqdaar, wajah aur
  * note likh sakte hain.
  */
-/** Chhupi hui ya market se khatam — dono par nishani. */
-export function statusBadge(product) {
-  if (product.status === 'discontinued') {
-    return `<span class="badge badge--out">${esc(t('products.discontinued'))}</span>`
-  }
-  if (product.status === 'hidden') {
-    return `<span class="badge badge--hidden">${esc(t('products.inactive'))}</span>`
-  }
-  return ''
-}
-
 export function quickStock(product) {
   const out = (product.stockQty || 0) <= 0
   // Buttons badge ke NEECHE — saath rakhne se product ka naam kat jata tha.
@@ -222,7 +239,7 @@ export function productGridCard(product, { categoryIcon, currency }) {
   return `
     <div class="gcard">
       <button class="gcard__main" data-open="${escAttr(product.id)}">
-        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}${packBadge(product)}</div>
+        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}${packBadge(product)}${alertBadge(product)}</div>
         <p class="gcard__name" dir="auto">${esc(localizedName(product))}</p>
         <p class="gcard__sub truncate">${product.brand ? esc(product.brand) : '&nbsp;'}</p>
         <p class="gcard__price">

@@ -129,8 +129,11 @@ export function renderProductForm(root, productId) {
     loadImage(existing.imageId).then((data) => {
       if (!data) return
       form.imageData = data
-      const preview = $('#img-preview', root)
-      if (preview) preview.innerHTML = `<img src="${escAttr(data)}" alt="">`
+      // Tile ka poora andar badalta hai (khali se bhari halat me), aur us ke
+      // andar file wale khane bhi hain — is liye seedha innerHTML likhne ke
+      // bajaye screen dobara banate hain. Ye tab hota hai jab dukandar ne abhi
+      // kuch likha nahi hota, is liye kuch zaya nahi hota.
+      if (root.isConnected) redraw()
     })
   }
 
@@ -423,32 +426,43 @@ export function renderProductForm(root, productId) {
   // ----------------------------------------------------------------- image
 
   /**
-   * Tasveer ka hissa jaan boojh kar bina "Photo" wale label ke hai — camera ka
-   * khana khud bata deta hai ke ye kya hai, aur is form par har bachi hui line
-   * ki qeemat hai.
+   * Tasveer ka hissa.
+   *
+   * Pehle ye ek chhota thumb aur us ke saath teen buttons ki qatar thi — dekhne
+   * me toolbar lagti thi, form ka hissa nahi. Ab poori chaurai ka ek tile hai:
+   * khali ho to andar hi "tasveer lagayein" likha hota hai aur dono buttons
+   * usi ke andar; tasveer lag jaye to wo poore tile par phail jati hai aur
+   * chhote se buttons upar tair jate hain. Yehi tarteeq har app me hai, is
+   * liye dukandar ko seekhna nahi parta.
    */
   function imageField() {
     const preview = form.imageData || legacyImage
+
     return `
-      <div class="photorow">
-        <button type="button" class="thumb thumb--pick" id="img-preview" data-pick="gallery"
-          aria-label="${escAttr(t('form.choosePhoto'))}">
-          ${preview ? `<img src="${escAttr(preview)}" alt="">` : '📷'}
-        </button>
-        <div class="photorow__actions">
-          <button type="button" class="btn btn--secondary btn--sm" data-pick="camera">
-            📷 ${esc(t('form.takePhoto'))}
-          </button>
-          <button type="button" class="btn btn--secondary btn--sm" data-pick="gallery">
-            🖼️ ${esc(t('form.choosePhoto'))}
-          </button>
-          ${
-            preview
-              ? `<button type="button" class="btn btn--ghost btn--sm" data-remove-image
-                   style="color:var(--danger)">${esc(t('form.removePhoto'))}</button>`
-              : ''
-          }
-        </div>
+      <div class="photo${preview ? ' photo--filled' : ''}" id="img-preview">
+        ${
+          preview
+            ? `<img class="photo__img" src="${escAttr(preview)}" alt="">
+               <div class="photo__over">
+                 <button type="button" class="photo__pill" data-pick="gallery">
+                   ${esc(t('form.changePhoto'))}
+                 </button>
+                 <button type="button" class="photo__x" data-remove-image
+                   aria-label="${escAttr(t('form.removePhoto'))}">✕</button>
+               </div>`
+            : `<div class="photo__empty">
+                 <span class="photo__icon">📷</span>
+                 <p class="photo__title">${esc(t('form.addPhoto'))}</p>
+                 <div class="photo__buttons">
+                   <button type="button" class="btn btn--secondary btn--sm" data-pick="camera">
+                     ${esc(t('form.takePhoto'))}
+                   </button>
+                   <button type="button" class="btn btn--secondary btn--sm" data-pick="gallery">
+                     ${esc(t('form.choosePhoto'))}
+                   </button>
+                 </div>
+               </div>`
+        }
         <input type="file" accept="image/*" capture="environment" id="file-camera" hidden>
         <input type="file" accept="image/*" id="file-gallery" hidden>
       </div>`

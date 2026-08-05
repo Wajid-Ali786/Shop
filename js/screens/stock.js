@@ -3,13 +3,12 @@ import { t, unitLabel, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
 import { state, productById } from '../store.js'
 import { appBar, empty, loading, section, movementRow, stockLevel, quickStock } from '../components.js'
-import { formatMoney, formatDateTime, daysUntil } from '../lib/format.js'
+import { formatMoney, formatDateTime, daysUntil, EXPIRY_WARNING_DAYS } from '../lib/format.js'
 import { formatQty } from '../lib/units.js'
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
 
 /** Itne din ke andar miyaad khatam ho to "jald khatam" mana jata hai. */
-const EXPIRY_WARNING_DAYS = 30
 
 let activeTab = 'alerts'
 
