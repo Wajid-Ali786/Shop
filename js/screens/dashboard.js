@@ -4,6 +4,7 @@ import { navigate } from '../lib/router.js'
 import { state, productById, backupDue, daysSinceBackup } from '../store.js'
 import { empty, loading, section, movementRow } from '../components.js'
 import { formatMoney, formatDateTime } from '../lib/format.js'
+import { runBackup } from '../lib/backup.js'
 import { groupStockAlerts } from './stock.js'
 
 export function renderDashboard(root) {
@@ -81,6 +82,12 @@ export function renderDashboard(root) {
 
     ${state.products.length ? `<button class="fab" data-add aria-label="${escAttr(t('home.quickAdd'))}">+</button>` : ''}`
 
+  // Card par likha hai "backup mehfooz karein" — to dabate hi wahi hona
+  // chahiye. Pehle ye Settings kholta tha, jo wada poora nahi karta tha.
+  on(root, 'click', '[data-backup-now]', async (_e, el) => {
+    await runBackup(el)
+  })
+
   on(root, 'click', '[data-add]', () => navigate('/product/new'))
   on(root, 'click', '[data-go]', (_e, el) => navigate(el.dataset.go))
 }
@@ -98,7 +105,7 @@ function backupCard() {
 
   const days = daysSinceBackup()
   return `
-    <button class="card card--warn card--tap" data-go="/settings" style="margin-bottom:16px">
+    <button class="card card--warn card--tap" data-backup-now style="margin-bottom:16px">
       <div class="row" style="gap:12px;align-items:flex-start">
         <span style="font-size:1.4rem;line-height:1">💾</span>
         <div style="flex:1;min-width:0;text-align:start">
