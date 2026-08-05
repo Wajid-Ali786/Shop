@@ -127,7 +127,13 @@ h3 {
 /* ---------------------------------------------------------------- layout */
 
 .screen {
-  padding-bottom: 96px; /* bottom nav ke neeche na chhupe */
+  /*
+   * Bottom nav (76px) + us ke oopar tairta hua FAB.
+   *
+   * 96px kaafi nahi tha: FAB aakhri do rows ke +/− buttons par aa jata tha
+   * aur "Out of stock" jaisa badge us ke peeche chhup jata tha.
+   */
+  padding-bottom: 152px;
 }
 .screen--form {
   padding-bottom: 110px; /* fixed save bar ke liye */
@@ -1098,6 +1104,7 @@ input[type='checkbox'] {
   /* Halki tasveer par bhi parha ja sake. */
   backdrop-filter: blur(2px);
   pointer-events: none;
+  unicode-bidi: isolate;
 }
 /*
  * Doosre kone ka nishan — expiry ya "band ho chuki".
@@ -1120,6 +1127,8 @@ input[type='checkbox'] {
   line-height: 1.4;
   backdrop-filter: blur(2px);
   pointer-events: none;
+  /* Mila jula matn (adad + harf) RTL me ulat na jaye. */
+  unicode-bidi: isolate;
 }
 .cornerbadge--danger {
   background: var(--danger);
