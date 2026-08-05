@@ -61,6 +61,8 @@ export const en = {
   'auth.signIn': 'Sign in',
   'auth.signUp': 'Create account',
   'auth.toSignUp': 'First time? Create your shop account',
+  'auth.showPassword': 'Show password',
+  'auth.hidePassword': 'Hide password',
   'auth.forgot': 'Forgot your password?',
   'auth.forgotNeedEmail': 'Type your email first, then tap this.',
   'auth.forgotSent': 'If that email has an account, a reset link is on its way.',
@@ -135,7 +137,7 @@ export const en = {
   'settings.catalogOn': 'On',
   'settings.catalogOff': 'Off',
   'settings.catalogSafety':
-    'Only the name, photo and selling price are shared. Your cost price, wholesale price and stock counts are never published.',
+    'Only the name, photo, selling price and how much stock is left are shared. Your cost price, hidden search tags, barcodes and stock history are never published.',
   'settings.catalogRepublish': 'Publish again',
   'settings.backupReminder': 'Remind me to back up',
   'settings.backupReminderDays': 'Every {days} days',
@@ -350,6 +352,16 @@ export const en = {
   'settings.restoreReplaceDesc': 'Deletes your current products first, then loads the file',
   'settings.restoring': 'Restoring…',
   'settings.restored': 'Restored {products} products and {categories} categories',
+  'settings.install': 'Install app',
+  'settings.installDesc':
+    'Put Karyana Shop on your home screen. It opens like a normal app, full screen, and works without internet.',
+  'settings.installBtn': 'Install on this phone',
+  'settings.installStarted': 'Installing — look for the icon on your home screen',
+  'settings.installDone': 'App is installed on this phone',
+  'settings.installIos':
+    'In Safari, tap the Share button at the bottom, then choose "Add to Home Screen".',
+  'settings.installManual':
+    'Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".',
   'settings.about': 'About',
   'settings.aboutCloud':
     'Your data is saved in your own Firebase project, so you can open this shop from any phone with your login. The app also works without internet and syncs when the connection comes back.',

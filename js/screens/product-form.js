@@ -60,7 +60,34 @@ function emptyForm() {
   }
 }
 
-export function renderProductForm(root, productId) {
+/** Snapshot — tasveer bahar, wajah neeche `isDirty()` par likhi hai. */
+const snapshot = (f) => JSON.stringify({ ...f, imageData: '' })
+
+/**
+ * Adhoori bhari hui form, screen se bahar mehfooz.
+ *
+ * Ye zaroori is liye hai ke poori app ek hi `render()` se dobara banti hai, aur
+ * wo render kisi bhi waqt chal sakta hai — koi bhi Firestore update usay chala
+ * deta hai. Form ki halat pehle isi function ke andar rehti thi, to har aisa
+ * render nayi khali form bana deta tha aur dukandar ka likha hua sab uR jata.
+ *
+ * Sab se aasani se ye "nayi category banao" par hota tha: category banate hi
+ * Firestore badalta hai, render chalta hai, aur naam/qeemat/stock — sab khali.
+ * Magar wajah wo button nahi tha; doosre phone par kiya gaya koi bhi kaam wohi
+ * nuqsaan karta.
+ *
+ * Ek waqt me ek hi form khuli hoti hai, is liye ek hi draft kaafi hai. `key`
+ * batati hai ye kis cheez ki hai — doosri product kholte hi nayi shuru hoti
+ * hai. Form se bahar jate hi app.js ise saaf kar deti hai.
+ */
+let draft = null
+
+/** Form se bahar nikalte waqt — app.js har us route par chalati hai jo form nahi. */
+export function clearProductDraft() {
+  draft = null
+}
+
+export function renderProductForm(root, productId, rerender) {
   const isEdit = Boolean(productId)
   const existing = isEdit ? productById(productId) : null
 
@@ -73,19 +100,33 @@ export function renderProductForm(root, productId) {
     return
   }
 
-  const form = isEdit
-    ? toForm(existing)
-    : { ...emptyForm(), lowStockAt: String(state.settings.defaultLowStockAt) }
+  const key = productId || 'new'
+  if (!draft || draft.key !== key) {
+    const fresh = isEdit
+      ? toForm(existing)
+      : { ...emptyForm(), lowStockAt: String(state.settings.defaultLowStockAt) }
 
-  let showMore = isEdit
-    ? Boolean(
-        existing.brand || existing.barcode ||
-        existing.expiryDate || existing.nameUr || existing.status !== 'active',
-      )
-    : false
+    draft = {
+      key,
+      form: fresh,
+      // Purane record par ye khane pehle se bhare hon to chhupana bay-maani hai.
+      showMore: isEdit
+        ? Boolean(
+            existing.brand || existing.barcode ||
+            existing.expiryDate || existing.nameUr || existing.status !== 'active',
+          )
+        : false,
+      tagInputValue: '',
+      imageDirty: false,
+      saving: false,
+      // Back dabate waqt isi se moqabla hota hai — is liye ye bhi draft me hai,
+      // warna dobara banne par "koi tabdeeli nahi" lagta aur warning na aati.
+      initial: snapshot(fresh),
+    }
+  }
+
+  const form = draft.form
   let errors = {}
-  let saving = false
-  let tagInputValue = ''
   /** Purani inline tasveer (product doc ke andar) — sirf purane records me. */
   const legacyImage = isEdit ? existing.image || '' : ''
 
@@ -107,21 +148,16 @@ export function renderProductForm(root, productId) {
    * hota aur app samajhti ke tasveer hata di gayi hai — product ki tasveer
    * hamesha ke liye gum.
    */
-  let imageDirty = false
-
   /**
-   * Form ki shuru wali halat — back dabate waqt isi se moqabla hota hai.
+   * Kuch badla hai ya nahi.
    *
-   * `imageData` jaan boojh kar bahar hai: edit khulte hi wo background me
-   * purani tasveer se bhar jata hai, aur us se har edit "badla hua" lagne
-   * lagta. Tasveer ka hisaab `imageDirty` rakhta hai.
+   * `imageData` snapshot se bahar hai: edit khulte hi wo background me purani
+   * tasveer se bhar jata hai, aur us se har edit "badla hua" lagne lagta.
+   * Tasveer ka hisaab `draft.imageDirty` rakhta hai.
    */
-  const snapshot = (f) => JSON.stringify({ ...f, imageData: '' })
-  const initialForm = snapshot(form)
-
   function isDirty() {
     readInputs()
-    return imageDirty || snapshot(form) !== initialForm
+    return draft.imageDirty || snapshot(form) !== draft.initial
   }
 
   // Edit par tasveer alag collection se aati hai.
@@ -138,6 +174,18 @@ export function renderProductForm(root, productId) {
   }
 
   function draw() {
+    /*
+     * Screen beech me dobara ban chuki hai?
+     *
+     * `await` ke doosri taraf ye aam baat hai — nayi category banate hi
+     * Firestore badalta hai aur app poori screen dobara bana deti hai. Us ke
+     * baad `root` hataya ja chuka hota hai, aur us par likha hua kisi ko nazar
+     * nahi aata: nayi category ban to jati thi magar form me chuni hui nahi
+     * dikhti thi. Aise me app se poori screen mangwa lete hain — draft mehfooz
+     * hai, is liye likha hua sab wapas apni jagah aa jata hai.
+     */
+    if (!root.isConnected && rerender) return rerender()
+
     root.innerHTML = `
       <div class="screen screen--form">
         ${appBar(isEdit ? t('form.editTitle') : t('form.addTitle'), {
@@ -181,15 +229,15 @@ export function renderProductForm(root, productId) {
           </div>
 
           <button class="btn btn--secondary btn--full" data-toggle-more style="margin-bottom:12px">
-            ${showMore ? `▲ ${esc(t('form.lessOptions'))}` : `▼ ${esc(t('form.moreOptions'))}`}
+            ${draft.showMore ? `▲ ${esc(t('form.lessOptions'))}` : `▼ ${esc(t('form.moreOptions'))}`}
           </button>
 
-          ${showMore ? moreCard() : ''}
+          ${draft.showMore ? moreCard() : ''}
         </div>
 
         <div class="savebar">
-          <button class="btn btn--primary btn--full" data-save ${saving ? 'disabled' : ''}>
-            ${saving ? '<span class="spinner spinner--sm"></span>' : esc(t('common.save'))}
+          <button class="btn btn--primary btn--full" data-save ${draft.saving ? 'disabled' : ''}>
+            ${draft.saving ? '<span class="spinner spinner--sm"></span>' : esc(t('common.save'))}
           </button>
         </div>
       </div>`
@@ -397,7 +445,7 @@ export function renderProductForm(root, productId) {
     return `
       <div class="tagbox">
         ${tags ? `<ul class="taglist">${tags}</ul>` : ''}
-        <input id="f-tag" value="${escAttr(tagInputValue)}"
+        <input id="f-tag" value="${escAttr(draft.tagInputValue)}"
           placeholder="${escAttr(t('form.tagsPlaceholder'))}" dir="auto">
       </div>`
   }
@@ -409,7 +457,7 @@ export function renderProductForm(root, productId) {
   function tagIdeas() {
     // Sirf chaar tajaweez. Pehle jitni milti thin sab dikhti thin aur teen
     // qatarein ban jati thin — form ka aadha hissa sirf tajaweez ka tha.
-    const ideas = suggestTags(state.products, tagInputValue, form.tags).slice(0, 4)
+    const ideas = suggestTags(state.products, draft.tagInputValue, form.tags).slice(0, 4)
     if (!ideas.length) return ''
 
     const chips = ideas
@@ -565,9 +613,9 @@ export function renderProductForm(root, productId) {
     if (!isEdit) set('stockQty', 'f-stockQty')
 
     const tagEl = $('#f-tag', root)
-    if (tagEl) tagInputValue = tagEl.value
+    if (tagEl) draft.tagInputValue = tagEl.value
 
-    if (showMore) {
+    if (draft.showMore) {
       set('nameUr', 'f-nameUr')
       set('brand', 'f-brand')
       set('costPrice', 'f-costPrice')
@@ -622,7 +670,7 @@ export function renderProductForm(root, productId) {
     })
     on(root, 'click', '[data-toggle-more]', () => {
       readInputs()
-      showMore = !showMore
+      draft.showMore = !draft.showMore
       draw()
     })
 
@@ -727,9 +775,9 @@ export function renderProductForm(root, productId) {
         if (!form.tags.some((tag) => tag.toLowerCase() === value.toLowerCase())) {
           form.tags.push(value)
         }
-        tagInputValue = ''
+        draft.tagInputValue = ''
         readInputs()
-        tagInputValue = ''
+        draft.tagInputValue = ''
         draw()
         $('#f-tag', root)?.focus()
       }
@@ -771,7 +819,7 @@ export function renderProductForm(root, productId) {
       const tag = el.dataset.addTag
       if (!form.tags.some((x) => x.toLowerCase() === tag.toLowerCase())) form.tags.push(tag)
       readInputs()
-      tagInputValue = ''
+      draft.tagInputValue = ''
       draw()
     })
 
@@ -797,7 +845,7 @@ export function renderProductForm(root, productId) {
 
         try {
           form.imageData = await compressImage(file)
-          imageDirty = true
+          draft.imageDirty = true
           readInputs()
           draw()
         } catch {
@@ -810,7 +858,7 @@ export function renderProductForm(root, productId) {
     on(root, 'click', '[data-remove-image]', () => {
       form.imageData = ''
       form.imageId = null
-      imageDirty = true
+      draft.imageDirty = true
       readInputs()
       draw()
     })
@@ -838,7 +886,7 @@ export function renderProductForm(root, productId) {
   }
 
   async function save() {
-    if (saving) return
+    if (draft.saving) return
     readInputs()
 
     errors = {}
@@ -858,7 +906,7 @@ export function renderProductForm(root, productId) {
       return
     }
 
-    saving = true
+    draft.saving = true
     draw()
 
     const num = (v) => {
@@ -878,7 +926,7 @@ export function renderProductForm(root, productId) {
       let imageId = originalImageId
       let staleImageId = null
 
-      if (imageDirty) {
+      if (draft.imageDirty) {
         imageId = form.imageData ? await saveImage(form.imageData) : null
         staleImageId = originalImageId
       } else if (!imageId && legacyImage) {
@@ -928,7 +976,7 @@ export function renderProductForm(root, productId) {
       toast(t('form.saved'))
       goBack()
     } catch (err) {
-      saving = false
+      draft.saving = false
       draw()
       toast(err?.code === 'permission-denied' ? t('error.permission') : t('error.generic'))
     }

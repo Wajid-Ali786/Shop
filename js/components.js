@@ -29,6 +29,9 @@ export const ICONS = {
     '<path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round"/>',
   viewGrid:
     '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff:
+    '<path d="M10.6 6.2A9.9 9.9 0 0112 6c6.4 0 10 7 10 7a17.4 17.4 0 01-3 3.7M6.5 7.6A17.4 17.4 0 002 13s3.6 7 10 7a9.8 9.8 0 004.6-1.1" stroke-linecap="round"/><path d="M9.9 10a3 3 0 004.2 4.2M3 3l18 18" stroke-linecap="round"/>',
 }
 
 export function icon(name, cls = '') {
@@ -84,6 +87,74 @@ export function field(label, control, { hint = '', error = '', required = false 
       ${control}
       ${error ? `<span class="field__error">${esc(error)}</span>` : hint ? `<span class="field__hint">${esc(hint)}</span>` : ''}
     </label>`
+}
+
+/**
+ * Password ka khana, saath me "dikhao" wala button.
+ *
+ * Phone par password likhna andhere me teer chalane jaisa hai — har harf ek
+ * gol nishan ban jata hai. Ghalti sirf "ghalat password" ke paighaam se pata
+ * chalti hai, aur nayi password banate waqt to do khane milane hote hain. Ye
+ * button ek nazar dekhne deta hai ke likha kya hai.
+ *
+ * `dir="ltr"` wrapper par bhi hai: password hamesha baen se likha jata hai, is
+ * liye aankh ka button Urdu me bhi dahini taraf hi rehna chahiye — warna wo
+ * unhi nishanat par aa jata jo abhi type ho rahe hain.
+ */
+export function passwordInput(id, { autocomplete = 'current-password', required = false } = {}) {
+  return `
+    <span class="pwwrap" dir="ltr">
+      <input id="${escAttr(id)}" type="password" dir="ltr"
+        autocomplete="${escAttr(autocomplete)}"${required ? ' required' : ''}>
+      <button type="button" class="pwtoggle" data-pwtoggle="${escAttr(id)}"
+        aria-controls="${escAttr(id)}" aria-pressed="false"
+        aria-label="${escAttr(t('auth.showPassword'))}"
+        title="${escAttr(t('auth.showPassword'))}">${icon('eye')}</button>
+    </span>`
+}
+
+/**
+ * Aankh wale buttons ko chalata hai.
+ *
+ * Do baatein ehtiyat maangti hain:
+ *   - `mousedown` rok dete hain, warna button par ungli rakhte hi khana focus
+ *     kho deta hai aur phone ka keyboard band ho jata hai — dukandar ko har
+ *     dafa dobara khana daba kar likhna parta.
+ *   - `type` badalne par browser cursor aakhir me phenk deta hai. Beech me
+ *     ghalti theek karte hue ye bohat kharab lagta hai, is liye jagah yaad
+ *     rakh kar wapas laga dete hain.
+ */
+export function wirePasswordToggles(root) {
+  for (const button of root.querySelectorAll('[data-pwtoggle]')) {
+    const input = root.querySelector(`#${CSS.escape(button.dataset.pwtoggle)}`)
+    if (!input) continue
+
+    button.addEventListener('mousedown', (e) => e.preventDefault())
+
+    button.addEventListener('click', () => {
+      const show = input.type === 'password'
+      const start = input.selectionStart
+      const end = input.selectionEnd
+      const hadFocus = document.activeElement === input
+
+      input.type = show ? 'text' : 'password'
+
+      button.setAttribute('aria-pressed', String(show))
+      const label = t(show ? 'auth.hidePassword' : 'auth.showPassword')
+      button.setAttribute('aria-label', label)
+      button.setAttribute('title', label)
+      button.innerHTML = icon(show ? 'eyeOff' : 'eye')
+
+      if (hadFocus) {
+        input.focus()
+        try {
+          if (start !== null) input.setSelectionRange(start, end)
+        } catch {
+          // Kuch browsers `text` par selection nahi lagane dete — koi harj nahi.
+        }
+      }
+    })
+  }
 }
 
 export function options(list, selected) {

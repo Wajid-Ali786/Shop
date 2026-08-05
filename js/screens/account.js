@@ -1,6 +1,6 @@
 import { esc, openSheet, closeSheet, toast, $ } from '../lib/dom.js'
 import { t } from '../i18n/index.js'
-import { field } from '../components.js'
+import { field, passwordInput, wirePasswordToggles } from '../components.js'
 import { changePassword, changeEmail, currentEmail, authErrorKey } from '../firebase.js'
 
 /**
@@ -15,23 +15,24 @@ export function openChangePasswordSheet() {
   const wrap = openSheet(t('account.changePassword'), `
     ${field(
       t('account.currentPassword'),
-      `<input id="ac-current" type="password" dir="ltr" autocomplete="current-password">`,
+      passwordInput('ac-current', { autocomplete: 'current-password' }),
       { required: true },
     )}
     ${field(
       t('account.newPassword'),
-      `<input id="ac-new" type="password" dir="ltr" autocomplete="new-password">`,
+      passwordInput('ac-new', { autocomplete: 'new-password' }),
       { hint: t('auth.passwordHint'), required: true },
     )}
     ${field(
       t('account.confirmPassword'),
-      `<input id="ac-confirm" type="password" dir="ltr" autocomplete="new-password">`,
+      passwordInput('ac-confirm', { autocomplete: 'new-password' }),
       { required: true },
     )}
     <div id="ac-error"></div>
     <button class="btn btn--primary btn--full" id="ac-save">${esc(t('common.save'))}</button>`)
 
   const body = wrap.querySelector('.sheet__body')
+  wirePasswordToggles(body)
   const save = $('#ac-save', body)
   const errorBox = $('#ac-error', body)
 
@@ -80,7 +81,7 @@ export function openChangeEmailSheet() {
     )}
     ${field(
       t('account.currentPassword'),
-      `<input id="ae-password" type="password" dir="ltr" autocomplete="current-password">`,
+      passwordInput('ae-password', { autocomplete: 'current-password' }),
       { required: true },
     )}
     <div class="card card--warn" style="margin-bottom:16px">
@@ -90,6 +91,7 @@ export function openChangeEmailSheet() {
     <button class="btn btn--primary btn--full" id="ae-save">${esc(t('account.sendVerification'))}</button>`)
 
   const body = wrap.querySelector('.sheet__body')
+  wirePasswordToggles(body)
   const save = $('#ae-save', body)
   const errorBox = $('#ae-error', body)
 
