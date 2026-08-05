@@ -10,6 +10,23 @@ import { wireQuickStock } from '../lib/quick-stock.js'
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
 const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showArchived: false }
 
+/**
+ * Ek baar me itni rows screen par aati hain.
+ *
+ * Baat sirf khoobsurti ki nahi hai: 1000 products ka poora DOM ek saath banane
+ * me sasta phone kai second ke liye jam jata tha, aur har tasveer bhi saath hi
+ * load hoti thi. Screen par to waise bhi 8-10 rows nazar aati hain, is liye
+ * baqi maang par aati hain. Data poora mojood rehta hai — search aur ginti
+ * hamesha SAARE products par chalti hai, sirf dikhawa mehdood hai.
+ */
+const PAGE_SIZE = 60
+let shownCount = PAGE_SIZE
+
+/** Filter/search badalne par dobara shuru se — warna nayi list adhoori lagti hai. */
+function resetPaging() {
+  shownCount = PAGE_SIZE
+}
+
 /** List ya grid — dukandar ka chuna hua view yaad rehta hai. */
 function loadView() {
   return localStorage.getItem('karyana.view') === 'grid' ? 'grid' : 'list'
@@ -155,6 +172,7 @@ function listOrEmpty(visible) {
     const grid = ui.view === 'grid'
     const render = grid ? productGridCard : productCard
     const items = visible
+      .slice(0, shownCount)
       .map((p) => {
         const cat = categoryById((p.categoryIds || [])[0])
         return `<li>${render(p, {
@@ -163,7 +181,21 @@ function listOrEmpty(visible) {
         })}</li>`
       })
       .join('')
-    return `<ul class="${grid ? 'pgrid' : 'plist'} pad" style="padding-top:0">${items}</ul>`
+
+    const remaining = visible.length - shownCount
+    const more =
+      remaining > 0
+        ? `<div class="pad" style="padding-top:0">
+             <button class="btn btn--secondary btn--full" data-show-more>
+               ${esc(t('products.showMore', { count: Math.min(remaining, PAGE_SIZE) }))}
+             </button>
+             <p class="tiny muted center" style="margin-top:8px">
+               ${esc(t('products.showingOf', { shown: shownCount, total: visible.length }))}
+             </p>
+           </div>`
+        : ''
+
+    return `<ul class="${grid ? 'pgrid' : 'plist'} pad" style="padding-top:0">${items}</ul>${more}`
   }
 
   if (state.products.length === 0) {
@@ -186,6 +218,7 @@ function wire(root, rerender) {
       clearTimeout(timer)
       // Har keystroke par poori list dobara na banay.
       timer = setTimeout(() => {
+        resetPaging()
         rerender()
         const next = root.querySelector('#q')
         if (next) {
@@ -200,6 +233,7 @@ function wire(root, rerender) {
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
       ui.sort = e.target.value
+      resetPaging()
       rerender()
     })
   }
@@ -207,16 +241,24 @@ function wire(root, rerender) {
   on(root, 'click', '[data-cat]', (_e, el) => {
     const value = el.dataset.cat
     ui.categoryId = ui.categoryId === value ? 'all' : value
+    resetPaging()
     rerender()
   })
 
   on(root, 'click', '[data-view]', (_e, el) => {
     saveView(el.dataset.view)
+    resetPaging()
     rerender()
   })
 
   on(root, 'click', '[data-toggle-archived]', () => {
     ui.showArchived = !ui.showArchived
+    resetPaging()
+    rerender()
+  })
+
+  on(root, 'click', '[data-show-more]', () => {
+    shownCount += PAGE_SIZE
     rerender()
   })
 

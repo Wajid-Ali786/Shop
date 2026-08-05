@@ -258,6 +258,18 @@ h3 {
 .card--danger {
   border-color: var(--danger);
 }
+/* Poora card hi ek bara tap target — button ke default styles hata kar. */
+.card--tap {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.card--tap:active {
+  transform: scale(0.99);
+}
 .card--flat {
   padding: 12px;
   border-radius: var(--radius);
@@ -1366,6 +1378,31 @@ input[type='checkbox'] {
   padding: 24px;
   padding-top: calc(env(safe-area-inset-top) + 16px);
   padding-bottom: max(env(safe-area-inset-bottom), 24px);
+}
+
+/* Grahak wala catalog — bina login ke khulne wali list. */
+.catalog__top {
+  padding: calc(env(safe-area-inset-top) + 16px) 16px 8px;
+  text-align: center;
+}
+.catalog__title {
+  margin-top: 12px;
+  font-size: 1.5rem;
+}
+.catalog__tagline {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+.catalog__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+.catalog__actions .btn {
+  flex: 1;
+  max-width: 200px;
 }
 
 .welcome__lang {

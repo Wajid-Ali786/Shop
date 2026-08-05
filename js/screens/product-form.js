@@ -89,6 +89,26 @@ export function renderProductForm(root, productId) {
   /** Purani inline tasveer (product doc ke andar) — sirf purane records me. */
   const legacyImage = isEdit ? existing.image || '' : ''
 
+  /**
+   * Jo tasveer khulte waqt product par lagi thi. Save ke waqt sirf isi se
+   * moqabla hota hai — `form.imageId` par bharosa nahi kiya ja sakta kyunki
+   * "tasveer hatao" usay foran null kar deta hai.
+   */
+  const originalImageId = isEdit ? existing.imageId || null : null
+
+  /**
+   * Dukandar ne tasveer KHUD badli ya hatai hai?
+   *
+   * Ye jhanda lazmi hai. Is ke baghair save ka faisla `form.imageData` par tha,
+   * jo edit khulte hi background me purani tasveer se bhar jata hai — yaani
+   * sirf naam ya qeemat badalne par bhi wahi tasveer dobara upload ho kar
+   * purani delete ho jati thi. Aur agar dukandar tasveer load hone se PEHLE
+   * Save daba deta (dheeme internet par aam baat), to imageData abhi khali
+   * hota aur app samajhti ke tasveer hata di gayi hai — product ki tasveer
+   * hamesha ke liye gum.
+   */
+  let imageDirty = false
+
   // Edit par tasveer alag collection se aati hai.
   if (isEdit && existing.imageId && !form.imageData) {
     loadImage(existing.imageId).then((data) => {
@@ -624,6 +644,7 @@ export function renderProductForm(root, productId) {
 
         try {
           form.imageData = await compressImage(file)
+          imageDirty = true
           readInputs()
           draw()
         } catch {
@@ -636,6 +657,7 @@ export function renderProductForm(root, productId) {
     on(root, 'click', '[data-remove-image]', () => {
       form.imageData = ''
       form.imageId = null
+      imageDirty = true
       readInputs()
       draw()
     })
@@ -688,14 +710,22 @@ export function renderProductForm(root, productId) {
 
     try {
       // Tasveer alag collection me jati hai; product me sirf uska id.
-      let imageId = form.imageId
-      if (form.imageData && form.imageData !== (isEdit ? existing.image : '')) {
-        const previous = imageId
-        imageId = await saveImage(form.imageData)
-        if (previous) await deleteImage(previous)
-      } else if (!form.imageData && isEdit && existing.imageId) {
-        await deleteImage(existing.imageId)
-        imageId = null
+      //
+      // Purani tasveer yahan HATTI NAHI — sirf yaad rakhi jati hai, aur product
+      // theek se likhe jane ke BAAD hatti hai. Pehle wo pehle hat jati thi, is
+      // liye agar product likhna nakam ho jata (permission, internet) to
+      // tasveer ja chuki hoti aur product usi gayi hui tasveer ki taraf ishara
+      // karta reh jata.
+      let imageId = originalImageId
+      let staleImageId = null
+
+      if (imageDirty) {
+        imageId = form.imageData ? await saveImage(form.imageData) : null
+        staleImageId = originalImageId
+      } else if (!imageId && legacyImage) {
+        // Purana record: tasveer product ke andar hi thi. Usay alag collection
+        // me le jate hain, warna neeche `image: null` likhte hi wo gum ho jati.
+        imageId = await saveImage(legacyImage)
       }
 
       const payload = {
@@ -729,6 +759,11 @@ export function renderProductForm(root, productId) {
       } else {
         await createProduct({ ...payload, stockQty: stockToBase(form.stockQty, isPack) ?? 0 })
       }
+
+      // Ab product mehfooz likha ja chuka hai — purani tasveer hata sakte hain.
+      // Yahan nakami se koi nuqsan nahi, bas ek bay-kaar tasveer reh jayegi.
+      if (staleImageId && staleImageId !== imageId) await deleteImage(staleImageId)
+
       toast(t('form.saved'))
       goBack()
     } catch (err) {

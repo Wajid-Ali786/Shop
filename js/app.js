@@ -7,10 +7,18 @@ import { applyTheme, watchSystemTheme } from './lib/theme.js'
 import { currentPath, navigate, onRouteChange, matchRoute } from './lib/router.js'
 import { isConfigured } from './config.js'
 import { initFirebase, watchAuth } from './firebase.js'
-import { state, subscribe, startSync, stopSync, seedDefaultCategories } from './store.js'
+import {
+  state,
+  subscribe,
+  startSync,
+  stopSync,
+  seedDefaultCategories,
+  defaultPublicShopUid,
+} from './store.js'
 import { bottomNav, NAV_PATHS, loading } from './components.js'
 
 import { renderWelcome } from './screens/welcome.js'
+import { renderCatalog, resetCatalog } from './screens/catalog.js'
 import { renderLogin, renderSetupNeeded } from './screens/login.js'
 import { renderDashboard } from './screens/dashboard.js'
 import { renderProducts } from './screens/products.js'
@@ -25,6 +33,17 @@ const root = $('#app')
 let signedIn = false
 let authChecked = false
 let seeded = false
+/**
+ * Home page kis dukan ka catalog dikhaye.
+ *
+ * `checked` alag rakhna zaroori hai. Pehle sirf `publicUid` tha aur jawab
+ * "koi catalog nahi" aane par usay `null` kar ke dobara poochna band kar dete
+ * the — magar `null` ka matlab "poocha ja chuka" bhi tha. Nateeja: dukandar
+ * site kholta (catalog abhi band), phir login kar ke catalog CHALU karta aur
+ * sign out karta, to app dobara poochti hi nahi thi aur welcome screen par
+ * atki rehti. Sirf page reload se theek hota tha.
+ */
+let publicShop = { uid: null, checked: false, asking: false }
 /** Maujooda screen ka cleanup (Firestore listeners band karne ke liye). */
 let cleanupScreen = null
 
@@ -50,6 +69,10 @@ if (!isConfigured()) {
       seeded = false
     } else if (!signedIn && wasSignedIn) {
       stopSync()
+      // Sign out ke baad catalog dobara mangwao — dukandar ne is dauran
+      // products badle ho sakte hain, ya catalog abhi abhi chalu kiya ho.
+      resetCatalog()
+      publicShop = { uid: null, checked: false, asking: false }
       // Sign out ke baad andar wale route par mat atko — home page par le jao.
       if (currentPath() !== '/') navigate('/')
     }
@@ -83,13 +106,36 @@ function render() {
     return
   }
 
-  // Sign out ki halat me site ka home page welcome screen hai — seedha login
-  // form nahi. Login usi screen ke button se khulta hai.
+  // Sign out ki halat me site ka home page grahak wala catalog hai — seedha
+  // login form nahi. Login usi screen ke button se khulta hai.
   if (!signedIn) {
     const path = currentPath()
-    if (path === '/login') renderLogin(root, 'signin')
-    else if (path === '/signup') renderLogin(root, 'signup')
-    else renderWelcome(root)
+    if (path === '/login') return renderLogin(root, 'signin')
+    if (path === '/signup') return renderLogin(root, 'signup')
+
+    // Kisi khaas dukan ka link: #/shop/{uid}
+    const shopRoute = matchRoute(path, '/shop/:uid')
+    if (shopRoute) return renderCatalog(root, shopRoute.uid, render)
+
+    // Home page: jis dukan ne catalog chalu kiya hua hai.
+    if (publicShop.uid) return renderCatalog(root, publicShop.uid, render)
+
+    // Ek hi baar poochte hain (har render par network par nahi jate), lekin
+    // sign in/out par ye dobara khul jata hai — neeche watchAuth dekhein.
+    if (!publicShop.checked && !publicShop.asking) {
+      publicShop.asking = true
+      defaultPublicShopUid()
+        .then((uid) => {
+          publicShop = { uid: uid || null, checked: true, asking: false }
+          if (uid) render()
+        })
+        .catch(() => {
+          publicShop = { uid: null, checked: true, asking: false }
+        })
+    }
+
+    // Catalog chalu nahi hai — sada welcome screen.
+    renderWelcome(root)
     return
   }
 

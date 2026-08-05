@@ -1,7 +1,7 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, productById } from '../store.js'
+import { state, productById, backupDue, daysSinceBackup } from '../store.js'
 import { empty, loading, section, movementRow } from '../components.js'
 import { formatMoney, formatDateTime } from '../lib/format.js'
 import { groupStockAlerts } from './stock.js'
@@ -30,6 +30,7 @@ export function renderDashboard(root) {
       </header>
 
       <div class="pad" style="padding-top:0">
+        ${backupCard()}
         ${
           state.products.length === 0
             ? empty(
@@ -82,6 +83,32 @@ export function renderDashboard(root) {
 
   on(root, 'click', '[data-add]', () => navigate('/product/new'))
   on(root, 'click', '[data-go]', (_e, el) => navigate(el.dataset.go))
+}
+
+/**
+ * Backup ki yaad-dihani.
+ *
+ * Sirf tab aati hai jab dukan me maal ho aur backup ko kaafi arsa ho gaya ho.
+ * Ise band karne ka button jaan boojh kar nahi rakha — band karne wala
+ * shopkeeper phir kabhi backup nahi karta. Ek tap me kaam ho jata hai, aur
+ * backup ho jane par banner khud chala jata hai.
+ */
+function backupCard() {
+  if (!backupDue()) return ''
+
+  const days = daysSinceBackup()
+  return `
+    <button class="card card--warn card--tap" data-go="/settings" style="margin-bottom:16px">
+      <div class="row" style="gap:12px;align-items:flex-start">
+        <span style="font-size:1.4rem;line-height:1">💾</span>
+        <div style="flex:1;min-width:0;text-align:start">
+          <p class="bold">${esc(t('home.backupTitle'))}</p>
+          <p class="small muted">
+            ${esc(days === null ? t('home.backupNever') : t('home.backupOld', { days }))}
+          </p>
+        </div>
+      </div>
+    </button>`
 }
 
 function stat(label, value, tone = '', goTo = '', small = false) {

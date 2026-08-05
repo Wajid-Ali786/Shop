@@ -28,6 +28,38 @@ service cloud.firestore {
       }
     }
 
+    // ---------------------------------------------------------------
+    //  Public catalog — grahak ke liye, bina login ke.
+    //
+    //  Ye dukan ke ASAL products NAHI hain. Ye un ki chhoti copy hai jis me
+    //  sirf naam, tasveer aur bikri ka rate hota hai. Khareed rate, thok rate
+    //  aur stock ki ginti kabhi yahan nahi likhi jati — wo `shops/{uid}` me
+    //  rehti hain, jahan sirf dukandar pahunch sakta hai.
+    //
+    //  Parhna har koi sakta hai; likhna sirf usi dukan ka malik.
+    // ---------------------------------------------------------------
+    match /publicShops/{uid} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid;
+
+      match /{document=**} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Home page kis dukan ka catalog dikhaye — ek hi ishara.
+    //
+    // Pehle jo dukan ise apne naam kar le wahi aage badal sakti hai. Is se
+    // koi doosra shakhs (signup khula hua hai) home page apni dukan par nahi
+    // mor sakta.
+    match /publicIndex/default {
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
     // Baqi har cheez band.
     match /{document=**} {
       allow read, write: if false;
