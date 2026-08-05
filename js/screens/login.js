@@ -1,6 +1,6 @@
 import { esc, $, toast } from '../lib/dom.js'
 import { t } from '../i18n/index.js'
-import { field } from '../components.js'
+import { field, passwordInput, wirePasswordToggles } from '../components.js'
 import { navigate } from '../lib/router.js'
 import { signIn, signUp, sendPasswordReset, authErrorKey } from '../firebase.js'
 
@@ -39,8 +39,10 @@ export function renderLogin(root, initialMode = 'signin') {
           )}
           ${field(
             t('auth.password'),
-            `<input id="auth-password" type="password" dir="ltr"
-               autocomplete="${isSignUp ? 'new-password' : 'current-password'}" required>`,
+            passwordInput('auth-password', {
+              autocomplete: isSignUp ? 'new-password' : 'current-password',
+              required: true,
+            }),
             { hint: isSignUp ? t('auth.passwordHint') : '' },
           )}
 
@@ -59,6 +61,8 @@ export function renderLogin(root, initialMode = 'signin') {
           ${esc(isSignUp ? t('auth.toSignIn') : t('auth.toSignUp'))}
         </button>
       </div>`
+
+    wirePasswordToggles(root)
 
     $('[data-back]', root).addEventListener('click', () => navigate('/'))
 

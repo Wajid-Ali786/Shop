@@ -409,6 +409,50 @@ h3 {
   color: var(--danger);
 }
 
+/*
+ * Password ka khana + aankh wala button.
+ *
+ * Wrapper par `dir="ltr"` lagi hai (dekhein components.js), is liye
+ * `inset-inline-end` Urdu me bhi dahini taraf hi rehta hai — wahin jahan
+ * password ke nishanat khatam hote hain.
+ */
+.pwwrap {
+  position: relative;
+  display: block;
+}
+.pwwrap input {
+  /* Button ke liye jagah — warna aakhri harf us ke neeche chhup jata hai. */
+  padding-inline-end: 46px;
+}
+.pwtoggle {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Ungli ke liye poora nishana, chahe icon chhota ho. */
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pwtoggle svg {
+  width: 20px;
+  height: 20px;
+}
+.pwtoggle[aria-pressed='true'] {
+  color: var(--brand);
+}
+.pwtoggle:active {
+  background: var(--border);
+}
+
 input,
 select,
 textarea {

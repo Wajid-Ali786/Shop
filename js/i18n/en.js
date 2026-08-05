@@ -61,6 +61,8 @@ export const en = {
   'auth.signIn': 'Sign in',
   'auth.signUp': 'Create account',
   'auth.toSignUp': 'First time? Create your shop account',
+  'auth.showPassword': 'Show password',
+  'auth.hidePassword': 'Hide password',
   'auth.forgot': 'Forgot your password?',
   'auth.forgotNeedEmail': 'Type your email first, then tap this.',
   'auth.forgotSent': 'If that email has an account, a reset link is on its way.',

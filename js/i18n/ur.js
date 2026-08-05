@@ -61,6 +61,8 @@ export const ur = {
   'auth.signIn': 'سائن ان',
   'auth.signUp': 'اکاؤنٹ بنائیں',
   'auth.toSignUp': 'پہلی بار؟ اپنی دکان کا اکاؤنٹ بنائیں',
+  'auth.showPassword': 'پاس ورڈ دکھائیں',
+  'auth.hidePassword': 'پاس ورڈ چھپائیں',
   'auth.forgot': 'پاس ورڈ بھول گئے؟',
   'auth.forgotNeedEmail': 'پہلے اپنا ای میل لکھیں، پھر یہ دبائیں۔',
   'auth.forgotSent': 'اگر اس ای میل پر اکاؤنٹ ہے تو ری سیٹ لنک بھیج دیا گیا ہے۔',

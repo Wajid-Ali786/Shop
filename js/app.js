@@ -27,7 +27,7 @@ import { renderCatalog, resetCatalog } from './screens/catalog.js'
 import { renderLogin, renderSetupNeeded } from './screens/login.js'
 import { renderDashboard } from './screens/dashboard.js'
 import { renderProducts } from './screens/products.js'
-import { renderProductForm } from './screens/product-form.js'
+import { renderProductForm, clearProductDraft } from './screens/product-form.js'
 import { renderProductDetail } from './screens/product-detail.js'
 import { renderStock } from './screens/stock.js'
 import { renderCategories } from './screens/categories.js'
@@ -244,6 +244,13 @@ function askPublicShop() {
 }
 
 function routeTo(path, screen) {
+  // Form se bahar nikal aaye to adhoora likha hua chhorne ka koi matlab nahi —
+  // warna agli dafa wohi purani adhoori form khul jati. (Form ke andar rehte
+  // hue ye mehfooz rehti hai; wajah product-form.js me likhi hai.)
+  if (path !== '/product/new' && !matchRoute(path, '/product/:id/edit')) {
+    clearProductDraft()
+  }
+
   if (path === '/') return renderDashboard(screen)
   if (path === '/products') return renderProducts(screen, render)
   if (path === '/stock') return renderStock(screen, render)
