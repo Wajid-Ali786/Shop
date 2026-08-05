@@ -7,6 +7,7 @@ import { icon, empty, loading, productCard, productGridCard, fillImages } from '
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
 import { wireDragScroll } from '../lib/dragscroll.js'
+import { PAGE_SIZE, moreBar, autoLoadMore } from '../lib/paging.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
 const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showArchived: false }
@@ -20,7 +21,6 @@ const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showA
  * baqi maang par aati hain. Data poora mojood rehta hai — search aur ginti
  * hamesha SAARE products par chalti hai, sirf dikhawa mehdood hai.
  */
-const PAGE_SIZE = 60
 let shownCount = PAGE_SIZE
 
 /** Filter/search badalne par dobara shuru se — warna nayi list adhoori lagti hai. */
@@ -96,6 +96,11 @@ export function renderProducts(root, rerender) {
 
   wire(root, rerender)
   wireDragScroll(root)
+  // Neeche pahunchte hi agla tukra khud aa jata hai.
+  autoLoadMore(root, () => {
+    shownCount += PAGE_SIZE
+    rerender()
+  })
   fillImages(root, loadImage)
 }
 
@@ -184,20 +189,8 @@ function listOrEmpty(visible) {
       })
       .join('')
 
-    const remaining = visible.length - shownCount
-    const more =
-      remaining > 0
-        ? `<div class="pad" style="padding-top:0">
-             <button class="btn btn--secondary btn--full" data-show-more>
-               ${esc(t('products.showMore', { count: Math.min(remaining, PAGE_SIZE) }))}
-             </button>
-             <p class="tiny muted center" style="margin-top:8px">
-               ${esc(t('products.showingOf', { shown: shownCount, total: visible.length }))}
-             </p>
-           </div>`
-        : ''
-
-    return `<ul class="${grid ? 'pgrid' : 'plist'} pad" style="padding-top:0">${items}</ul>${more}`
+    return `<ul class="${grid ? 'pgrid' : 'plist'} pad" style="padding-top:0">${items}</ul>
+      ${moreBar(Math.min(shownCount, visible.length), visible.length)}`
   }
 
   if (state.products.length === 0) {

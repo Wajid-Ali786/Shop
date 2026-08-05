@@ -4,6 +4,7 @@ import { navigate } from '../lib/router.js'
 import { state, productById } from '../store.js'
 import { appBar, empty, loading, section, movementRow, stockLevel, quickStock } from '../components.js'
 import { formatMoney, formatDateTime, daysUntil, EXPIRY_WARNING_DAYS } from '../lib/format.js'
+import { PAGE_SIZE, moreBar, autoLoadMore } from '../lib/paging.js'
 import { formatQty } from '../lib/units.js'
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
@@ -66,6 +67,7 @@ export function renderStock(root, rerender) {
 
   on(root, 'click', '[data-tab]', (_e, el) => {
     activeTab = el.dataset.tab
+    historyShown = PAGE_SIZE
     rerender()
   })
   on(root, 'click', '[data-open]', (_e, el) => navigate(`/product/${el.dataset.open}`))
@@ -74,6 +76,14 @@ export function renderStock(root, rerender) {
     if (product) openStockSheet(product)
   })
   on(root, 'click', '[data-share]', () => shareReorderList(reorder))
+  on(root, 'click', '[data-show-more]', () => {
+    historyShown += PAGE_SIZE
+    rerender()
+  })
+  autoLoadMore(root, () => {
+    historyShown += PAGE_SIZE
+    rerender()
+  })
   wireQuickStock(root, on)
 }
 
@@ -161,6 +171,9 @@ function alertRow(product, tone = '') {
     </li>`
 }
 
+/** History me abhi kitni rows dikhi hui hain. */
+let historyShown = PAGE_SIZE
+
 function historyTab() {
   // Jin movements ka product ab mojood nahi, unhe pehle hi nikaal do — warna
   // "history khali hai" ka faisla galat ho jata hai.
@@ -168,6 +181,7 @@ function historyTab() {
   if (!known.length) return empty('📋', t('stock.historyEmpty'))
 
   const rows = known
+    .slice(0, historyShown)
     .map((m) => {
       const product = productById(m.productId)
       return movementRow(
@@ -178,7 +192,8 @@ function historyTab() {
     })
     .join('')
 
-  return `<ul class="plist pad" style="padding-top:0">${rows}</ul>`
+  return `<ul class="plist pad" style="padding-top:0">${rows}</ul>
+    ${moreBar(Math.min(historyShown, known.length), known.length)}`
 }
 
 /** Supplier ko bhejne ke liye plain text list. */

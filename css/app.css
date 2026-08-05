@@ -2009,3 +2009,47 @@ input[type='checkbox'] {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* "Aur dikhayein" ka hissa — yehi wo nishan hai jise dekh kar agla tukra aata hai. */
+.morebar {
+  padding: 0 16px 16px;
+}
+
+/*
+ * Kheench kar taza karne wala nishan.
+ *
+ * Screen ke bilkul upar chhupa rehta hai aur ungli ke saath neeche aata hai.
+ */
+.pullrefresh {
+  position: fixed;
+  top: -44px;
+  inset-inline: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  pointer-events: none;
+}
+.pullrefresh--snap {
+  transition: transform 0.2s ease-out;
+}
+.pullrefresh__spin {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+}
+/* Kaafi kheench liya — ab chhorne par chalega. */
+.pullrefresh--ready .pullrefresh__spin {
+  border-color: var(--brand-light);
+  border-top-color: var(--brand);
+  transform: rotate(180deg);
+  transition: transform 0.15s;
+}
+.pullrefresh--busy .pullrefresh__spin {
+  animation: spin 0.7s linear infinite;
+}
