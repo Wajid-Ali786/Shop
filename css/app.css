@@ -1996,6 +1996,16 @@ input[type='checkbox'] {
 .list-row:active {
   background: var(--bg);
 }
+/* Wahi baat category rows ke chevron par bhi — bina size ke wo poori
+   screen ghair kar leta hai aur row ki lambai bay-hisaab ho jati hai. */
+.pcard > svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-inline-end: 4px;
+  color: var(--text-faint);
+}
+
 /* Chevron ko size dena zaroori hai — SVG ki apni koi lambai chaurai nahi hoti,
    size na ho to poori jagah ghair leta hai. */
 .list-row svg {

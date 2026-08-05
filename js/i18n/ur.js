@@ -298,6 +298,7 @@ export const ur = {
   'categories.empty': 'ابھی کوئی کیٹیگری نہیں',
   'categories.deleteConfirm':
     'یہ کیٹیگری ڈیلیٹ کریں؟ اس کے پروڈکٹس رہیں گے — بس بغیر کیٹیگری ہو جائیں گے۔',
+  'categories.delete': 'یہ کیٹیگری حذف کریں',
   'categories.restoreDefaults': 'ڈیفالٹ کیٹیگریز شامل کریں',
   'categories.duplicate': '“{name}” نام کی کیٹیگری پہلے سے موجود ہے',
   'categories.alreadyThere': '“{name}” پہلے سے موجود تھی — لگا دی گئی',
