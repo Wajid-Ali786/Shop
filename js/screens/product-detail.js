@@ -148,26 +148,22 @@ export function renderProductDetail(root, productId) {
   return unsubscribe
 }
 
+/** Khareed rate aur munafa — dono sirf dukandar ke liye. */
 function pricesCard(product) {
   const hasCost = product.costPrice !== null && product.costPrice !== undefined
-  const hasWholesale = product.wholesalePrice !== null && product.wholesalePrice !== undefined
-  if (!hasCost && !hasWholesale) return ''
+  if (!hasCost) return ''
 
   const currency = state.settings.currency
   return `
     <div class="card row" style="margin-bottom:16px;gap:24px">
-      ${hasCost ? `<div>
-          <p class="tiny muted">${esc(t('form.costPrice'))}</p>
-          <p class="bold">${esc(formatMoney(product.costPrice, currency))}</p>
-        </div>` : ''}
-      ${hasWholesale ? `<div>
-          <p class="tiny muted">${esc(t('form.wholesalePrice'))}</p>
-          <p class="bold">${esc(formatMoney(product.wholesalePrice, currency))}</p>
-        </div>` : ''}
-      ${hasCost ? `<div>
-          <p class="tiny muted">${esc(t('form.profit'))}</p>
-          <p class="bold price">${esc(formatMoney((product.salePrice || 0) - product.costPrice, currency))}</p>
-        </div>` : ''}
+      <div>
+        <p class="tiny muted">${esc(t('form.costPrice'))}</p>
+        <p class="bold">${esc(formatMoney(product.costPrice, currency))}</p>
+      </div>
+      <div>
+        <p class="tiny muted">${esc(t('form.profit'))}</p>
+        <p class="bold price">${esc(formatMoney((product.salePrice || 0) - product.costPrice, currency))}</p>
+      </div>
     </div>`
 }
 

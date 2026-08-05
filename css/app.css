@@ -596,35 +596,51 @@ input[type='checkbox'] {
 
 /* ----------------------------------------------------- category picker */
 
-/* Ek product kai categories me ho sakta hai, is liye checkbox list. */
-.catpick-list {
+/*
+ * Ek product kai categories me ho sakta hai.
+ *
+ * Pehle ye checkbox ki lambi list thi jo barah categories par poori screen
+ * kha jati thi. Ab chips saath saath lipatti hain — utni hi jagah me sab
+ * nazar aa jati hain aur form chhota rehta hai.
+ */
+.catchips {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 260px;
-  overflow-y: auto;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.catpick {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.catchip {
+  /* 44px tap target — ungli ke liye kam se kam itna chahiye. */
   min-height: 44px;
-  padding: 8px 12px;
+  padding: 8px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
 }
-.catpick--on {
+.catchip--on {
   background: var(--brand-light);
   border-color: var(--brand);
   color: var(--brand-text);
   font-weight: 600;
 }
-.catpick input {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  accent-color: var(--brand);
+.catchip:active {
+  transform: scale(0.97);
+}
+
+/* Form ka natija ek saade jumle me — "Rs 250 fi kg · shuruati stock 12.5 kg". */
+.form-summary {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--brand-light);
+  color: var(--brand-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 /* Categories haath se milate waqt nishan — poori row tap target hai, is liye
