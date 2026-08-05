@@ -6,6 +6,7 @@ import {
   saveSetting,
   restoreExport,
   isValidExport,
+  isNewerExport,
   catalogOn,
   publishCatalog,
   unpublishCatalog,
@@ -198,7 +199,12 @@ export function renderSettings(root, rerender) {
       data = null
     }
     if (!isValidExport(data)) {
-      await alertModal({ title: t('settings.restore'), message: t('settings.restoreInvalid') })
+      await alertModal({
+        title: t('settings.restore'),
+        // Nayi file par alag paighaam — "ye file kharab hai" ghalat baat hoti,
+        // file bilkul theek hai, bas app purani hai.
+        message: isNewerExport(data) ? t('settings.restoreNewer') : t('settings.restoreInvalid'),
+      })
       return
     }
 

@@ -22,6 +22,7 @@ import {
   query,
   orderBy,
   limit,
+  startAfter,
   where,
   writeBatch,
   runTransaction,
@@ -1010,26 +1011,67 @@ async function syncPublicCategories() {
  * Ye waahid jagah hai jahan store bina sign-in ke Firestore se baat karta hai,
  * is liye `shopRef()` ke bajaye seedha path banta hai.
  */
+/**
+ * Grahak wali list ek baar me itni aati hai.
+ *
+ * Ye sirf raftaar ka maamla nahi — PAISE ka hai. Ye list bina login ke khulti
+ * hai, yaani link jis ke paas bhi ho wo jitni dafa chahe khol sakta hai. Pehle
+ * har visit par dukan ka HAR product mangwaya jata tha: 500 products wali dukan
+ * par ek visit = 500 reads. Firebase free tier me rozana 50,000 reads hain, to
+ * ek WhatsApp group me link ghoomne se dukandar ka quota ek din me khatam ho
+ * sakta tha — aur us ke baad us ki apni app bhi ruk jati.
+ *
+ * Ab utna hi aata hai jitna nazar aata hai, aur agla tukra maang par.
+ */
+export const PUBLIC_PAGE_SIZE = 40
+
+function publicProductsQuery(shopDoc, after) {
+  const parts = [orderBy('nameEn')]
+  if (after) parts.push(startAfter(after))
+  parts.push(limit(PUBLIC_PAGE_SIZE))
+  return query(collection(shopDoc, 'products'), ...parts)
+}
+
+const shapePublic = (d) => ({ ...d.data(), id: d.id })
+
 export async function loadPublicShop(uid) {
   if (!uid) return null
   const shopDoc = doc(dbf, 'publicShops', uid)
   const [shopSnap, productSnap, categorySnap] = await Promise.all([
     getDoc(shopDoc),
-    getDocs(collection(shopDoc, 'products')),
+    getDocs(publicProductsQuery(shopDoc)),
     getDocs(collection(shopDoc, 'categories')),
   ])
   if (!shopSnap.exists()) return null
 
-  const products = productSnap.docs
-    .map((d) => ({ ...d.data(), id: d.id }))
-    .filter((p) => !p.hidden)
-    .sort((a, b) => String(a.nameEn).localeCompare(String(b.nameEn)))
-
+  const all = productSnap.docs.map(shapePublic)
   const categories = categorySnap.docs
-    .map((d) => ({ ...d.data(), id: d.id }))
+    .map(shapePublic)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
 
-  return { uid, ...shopSnap.data(), products, categories }
+  return {
+    uid,
+    ...shopSnap.data(),
+    categories,
+    // Chhupi hui cheezein grahak ko nahi dikhtin. Chhanti yahan hoti hai,
+    // is liye ek safhe me is se kam bhi aa sakti hain — ye theek hai.
+    products: all.filter((p) => !p.hidden),
+    // Agla safha kahan se shuru ho. `null` = aur kuch nahi bacha.
+    cursor: all.length === PUBLIC_PAGE_SIZE ? all[all.length - 1].nameEn : null,
+  }
+}
+
+/** Agla safha — sirf tab jab grahak neeche pahunche ya search kare. */
+export async function loadMorePublicProducts(uid, cursor) {
+  if (!uid || !cursor) return { products: [], cursor: null }
+  const shopDoc = doc(dbf, 'publicShops', uid)
+  const snap = await getDocs(publicProductsQuery(shopDoc, cursor))
+  const all = snap.docs.map(shapePublic)
+
+  return {
+    products: all.filter((p) => !p.hidden),
+    cursor: all.length === PUBLIC_PAGE_SIZE ? all[all.length - 1].nameEn : null,
+  }
 }
 
 /** Public tasveer — grahak wali list ke liye. */
@@ -1075,7 +1117,7 @@ export async function buildExport() {
 
   return {
     app: 'karyana-shop',
-    version: 5,
+    version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
     categories: state.categories,
@@ -1085,14 +1127,41 @@ export async function buildExport() {
   }
 }
 
+/**
+ * Backup file ki shakal ka version.
+ *
+ * `buildExport()` isay likhta hai. Barhta rehta hai jab file ka dhaancha
+ * badle — jaise jab tasveerein product ke andar se nikal kar apni collection
+ * me gayin.
+ */
+export const EXPORT_VERSION = 5
+
+/**
+ * File qabil-e-qubool hai?
+ *
+ * Version ka check ahem hai. Pehle sirf itna dekha jata tha ke file
+ * "karyana-shop" ki hai — yaani KISI bhi version ki file chup chaap restore ho
+ * jati thi. Agar kal file ka dhaancha phir badla, to naye app me purani file
+ * daalte hi kuch cheezein khamoshi se gum ho jatin aur dukandar ko pata bhi na
+ * chalta. Purani file abhi bhi chalti hai (app purane record khud sambhal leti
+ * hai); rok sirf us file par hai jo is app se NAYI ho — kyunki us me kya hai,
+ * ye app jaanti hi nahi.
+ */
 export function isValidExport(value) {
-  return (
-    value &&
-    typeof value === 'object' &&
-    value.app === 'karyana-shop' &&
-    Array.isArray(value.products) &&
-    Array.isArray(value.categories)
-  )
+  if (!value || typeof value !== 'object') return false
+  if (value.app !== 'karyana-shop') return false
+  if (!Array.isArray(value.products) || !Array.isArray(value.categories)) return false
+
+  const version = Number(value.version)
+  if (Number.isFinite(version) && version > EXPORT_VERSION) return false
+
+  return true
+}
+
+/** File is app se nayi hai? (Alag paighaam dikhane ke liye.) */
+export function isNewerExport(value) {
+  const version = Number(value?.version)
+  return Number.isFinite(version) && version > EXPORT_VERSION
 }
 
 /**

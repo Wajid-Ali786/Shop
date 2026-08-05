@@ -63,7 +63,7 @@ export function renderProducts(root, rerender) {
       ${categoryChips()}
 
       <div class="row row--between pad" style="padding-top:4px;padding-bottom:4px">
-        <span class="tiny muted">${esc(t('products.count', { count: visible.length }))}</span>
+        <span class="tiny muted" id="p-count">${esc(t('products.count', { count: visible.length }))}</span>
         <div class="row" style="gap:8px">
         <div class="viewtoggle">
           <button data-view="list" aria-pressed="${ui.view === 'list'}"
@@ -88,18 +88,49 @@ export function renderProducts(root, rerender) {
         </div>
       </div>
 
-      ${listOrEmpty(visible)}
+      <div id="p-results">${listOrEmpty(visible)}</div>
       ${archivedToggle()}
     </div>
 
     <button class="fab" data-add aria-label="${escAttr(t('home.quickAdd'))}">+</button>`
 
   wire(root, rerender)
+  afterList(root, rerender)
+}
+
+/**
+ * Sirf list ka hissa dobara banata hai — search box ko haath nahi lagata.
+ *
+ * Ye ahem hai. Pehle har harf par POORI screen dobara banti thi, jis me search
+ * ka khana bhi shamil tha — yaani jis khane me dukandar likh raha tha wo hi
+ * gayab ho kar naya ban jata, focus toot jata aur keyboard band ho jata. Code
+ * focus wapas lagane ki koshish karta tha, magar wo purane (hataye ja chuke)
+ * khane par lagti thi, is liye kabhi kaam nahi karti.
+ *
+ * Ab search ka khana apni jagah para rehta hai. Focus torne ki zaroorat hi
+ * nahi parti, aur cursor bhi wahin rehta hai jahan dukandar ne chhora tha.
+ */
+function refreshList(root, rerender) {
+  const area = root.querySelector('#p-results')
+  // Screen hi badal gayi ho to poora dobara banana hi theek hai.
+  if (!area) return rerender()
+
+  const visible = filterProducts()
+  area.innerHTML = listOrEmpty(visible)
+
+  const count = root.querySelector('#p-count')
+  if (count) count.textContent = t('products.count', { count: visible.length })
+
+  afterList(root, rerender)
+}
+
+/** Har dafa nayi rows aane ke baad ka kaam. */
+function afterList(root, rerender) {
   wireDragScroll(root)
   // Neeche pahunchte hi agla tukra khud aa jata hai.
   autoLoadMore(root, () => {
     shownCount += PAGE_SIZE
-    rerender()
+    refreshList(root, rerender)
   })
   fillImages(root, loadImage)
 }
@@ -214,12 +245,7 @@ function wire(root, rerender) {
       // Har keystroke par poori list dobara na banay.
       timer = setTimeout(() => {
         resetPaging()
-        rerender()
-        const next = root.querySelector('#q')
-        if (next) {
-          next.focus()
-          next.setSelectionRange(next.value.length, next.value.length)
-        }
+        refreshList(root, rerender)
       }, 180)
     })
   }
@@ -254,7 +280,7 @@ function wire(root, rerender) {
 
   on(root, 'click', '[data-show-more]', () => {
     shownCount += PAGE_SIZE
-    rerender()
+    refreshList(root, rerender)
   })
 
   on(root, 'click', '[data-add]', () => navigate('/product/new'))
