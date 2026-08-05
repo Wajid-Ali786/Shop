@@ -9,7 +9,7 @@
  * na ho to internet band hone par app khulti hi nahi. Firestore ka apna offline
  * cache tab hi kaam aata hai jab SDK khud load ho jaye.
  */
-const VERSION = 'v6'
+const VERSION = 'v7'
 const APP_CACHE = `karyana-app-${VERSION}`
 const VENDOR_CACHE = `karyana-vendor-${VERSION}`
 

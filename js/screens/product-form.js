@@ -145,7 +145,13 @@ export function renderProductForm(root, productId) {
         })}
 
         <div class="pad">
-          <div class="card" style="margin-bottom:16px">
+          <!--
+            Tarteeb wahi hai jo dukandar ke zehen me hoti hai: ye cheez kya hai,
+            phir kaise bikti hai aur kitne ki, phir kis khane me rakhni hai.
+            Baqi sab "More details" me — jise kabhi kabhi hi kholna parta hai.
+          -->
+          <div class="card formcard">
+            <p class="formhead">${esc(t('form.headBasics'))}</p>
             ${imageField()}
 
             ${field(
@@ -158,17 +164,19 @@ export function renderProductForm(root, productId) {
 
           ${sellByCard()}
 
-          <div class="card" style="margin-bottom:16px">
+          <div class="card formcard">
             ${categoryPicker()}
           </div>
 
           <!-- Hidden tags ka apna card — ye app ka khaas feature hai. -->
-          <div class="card" style="margin-bottom:16px">
-            ${field(t('form.tags'), tagBox(), { hint: t('form.tagsHint') })}
+          <div class="card formcard">
+            <p class="formhead">${esc(t('form.headTags'))}</p>
+            ${tagBox()}
+            <p class="field__hint">${esc(t('form.tagsHint'))}</p>
             ${tagIdeas()}
           </div>
 
-          <button class="btn btn--secondary btn--full" data-toggle-more style="margin-bottom:16px">
+          <button class="btn btn--secondary btn--full" data-toggle-more style="margin-bottom:12px">
             ${showMore ? `▲ ${esc(t('form.lessOptions'))}` : `▼ ${esc(t('form.moreOptions'))}`}
           </button>
 
@@ -195,7 +203,8 @@ export function renderProductForm(root, productId) {
     const isPack = form.sellBy === 'pack'
 
     return `
-      <div class="card" style="margin-bottom:16px">
+      <div class="card formcard">
+        <p class="formhead">${esc(t('form.headSelling'))}</p>
         <span class="field__label">${esc(t('form.sellBy'))}</span>
         <div class="choices choices--2" style="margin-bottom:6px">
           <button type="button" class="choice${isPack ? ' choice--active' : ''}" data-sellby="pack">
@@ -214,8 +223,13 @@ export function renderProductForm(root, productId) {
         <div class="grid-2">
           ${field(
             t('form.salePrice'),
-            `<input id="f-salePrice" type="number" inputmode="decimal" min="0" step="0.01"
-               value="${escAttr(form.salePrice)}" placeholder="0">`,
+            // Qeemat is form ka sab se ahem khana hai — currency saath likhi
+            // hui aur harf baray, taake nazar seedha yahan pare.
+            `<div class="pricebox">
+               <span class="pricebox__cur">${esc(state.settings.currency || 'Rs')}</span>
+               <input id="f-salePrice" type="number" inputmode="decimal" min="0" step="0.01"
+                 value="${escAttr(form.salePrice)}" placeholder="0">
+             </div>`,
             { required: true, error: errors.salePrice, hint: pricePerHint() },
           )}
           ${field(
@@ -224,7 +238,6 @@ export function renderProductForm(root, productId) {
                inputmode="${fractionAllowed() ? 'decimal' : 'numeric'}"
                step="${fractionAllowed() ? '0.001' : '1'}"
                value="${escAttr(form.lowStockAt)}" placeholder="0">`,
-            { hint: t('form.lowStockHint') },
           )}
         </div>
 
@@ -349,8 +362,8 @@ export function renderProductForm(root, productId) {
       .join('')
 
     return `
-      <div class="row row--between" style="margin-bottom:8px">
-        <span class="field__label" style="margin:0">${esc(t('form.categories'))}</span>
+      <div class="row row--between" style="margin-bottom:10px">
+        <p class="formhead" style="margin:0">${esc(t('form.categories'))}</p>
         ${
           chosen.length
             ? `<span class="tiny muted">${esc(t('form.categoriesChosen', { count: chosen.length }))}</span>`
@@ -389,7 +402,9 @@ export function renderProductForm(root, productId) {
    * click input par chala jata hai, button par nahi.
    */
   function tagIdeas() {
-    const ideas = suggestTags(state.products, tagInputValue, form.tags)
+    // Sirf chaar tajaweez. Pehle jitni milti thin sab dikhti thin aur teen
+    // qatarein ban jati thin — form ka aadha hissa sirf tajaweez ka tha.
+    const ideas = suggestTags(state.products, tagInputValue, form.tags).slice(0, 4)
     if (!ideas.length) return ''
 
     const chips = ideas
@@ -405,33 +420,32 @@ export function renderProductForm(root, productId) {
 
   // ----------------------------------------------------------------- image
 
+  /**
+   * Tasveer ka hissa jaan boojh kar bina "Photo" wale label ke hai — camera ka
+   * khana khud bata deta hai ke ye kya hai, aur is form par har bachi hui line
+   * ki qeemat hai.
+   */
   function imageField() {
     const preview = form.imageData || legacyImage
     return `
-      <div class="field">
-        <span class="field__label">${esc(t('form.image'))}</span>
-        <div class="row">
-          <div class="thumb thumb--lg" id="img-preview">
-            ${preview ? `<img src="${escAttr(preview)}" alt="">` : '📷'}
-          </div>
-          <div class="col" style="flex:1;gap:8px">
-            <div class="row" style="gap:8px">
-              <button type="button" class="btn btn--secondary btn--sm" data-pick="camera" style="flex:1">
-                📷 ${esc(t('form.takePhoto'))}
-              </button>
-              <button type="button" class="btn btn--secondary btn--sm" data-pick="gallery" style="flex:1">
-                🖼️ ${esc(t('form.choosePhoto'))}
-              </button>
-            </div>
-            ${
-              preview
-                ? `<button type="button" class="btn btn--ghost btn--sm" data-remove-image
-                     style="color:var(--danger);align-self:flex-start">
-                     ${esc(t('form.removePhoto'))}
-                   </button>`
-                : ''
-            }
-          </div>
+      <div class="photorow">
+        <button type="button" class="thumb thumb--pick" id="img-preview" data-pick="gallery"
+          aria-label="${escAttr(t('form.choosePhoto'))}">
+          ${preview ? `<img src="${escAttr(preview)}" alt="">` : '📷'}
+        </button>
+        <div class="photorow__actions">
+          <button type="button" class="btn btn--secondary btn--sm" data-pick="camera">
+            📷 ${esc(t('form.takePhoto'))}
+          </button>
+          <button type="button" class="btn btn--secondary btn--sm" data-pick="gallery">
+            🖼️ ${esc(t('form.choosePhoto'))}
+          </button>
+          ${
+            preview
+              ? `<button type="button" class="btn btn--ghost btn--sm" data-remove-image
+                   style="color:var(--danger)">${esc(t('form.removePhoto'))}</button>`
+              : ''
+          }
         </div>
         <input type="file" accept="image/*" capture="environment" id="file-camera" hidden>
         <input type="file" accept="image/*" id="file-gallery" hidden>
@@ -446,7 +460,8 @@ export function renderProductForm(root, productId) {
     const margin = showProfit && sale > 0 ? (profit / sale) * 100 : 0
 
     return `
-      <div class="card">
+      <div class="card formcard">
+        <p class="formhead">${esc(t('form.headMore'))}</p>
         ${field(
           t('form.nameUr'),
           `<input id="f-nameUr" value="${escAttr(form.nameUr)}" dir="rtl"
