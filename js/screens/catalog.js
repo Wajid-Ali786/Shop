@@ -1,11 +1,12 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, getLang, setLang, unitLabel, localizedName } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { loadPublicShop, loadPublicImage } from '../store.js'
+import { loadPublicShop, loadMorePublicProducts, loadPublicImage } from '../store.js'
 import { loading, empty } from '../components.js'
 import { formatMoney } from '../lib/format.js'
 import { formatPackSizeShort, formatQty, priceUnitLabel } from '../lib/units.js'
 import { wireDragScroll } from '../lib/dragscroll.js'
+import { autoLoadMore } from '../lib/paging.js'
 
 /**
  * Grahak wali list — bina login ke.
@@ -23,11 +24,38 @@ import { wireDragScroll } from '../lib/dragscroll.js'
 let cache = null
 let loadingUid = null
 
-/** Bari dukan par bhi pehli nazar foran bane — baqi "aur dikhayein" par. */
-const PAGE = 40
-
 /** Grahak ki search/chhanti — screen dobara banne par zaya na ho. */
-const ui = { query: '', categoryId: 'all', inStockOnly: false, shown: PAGE }
+const ui = { query: '', categoryId: 'all', inStockOnly: false }
+
+/** Agla safha aa raha hai? Do dafa ek saath na mangwayen. */
+let fetching = false
+
+/**
+ * Baqi maal server se mangwana.
+ *
+ * Neeche pahunchne par ek safha, aur SEARCH par poora — kyunki jo cheez abhi
+ * aayi hi nahi us me talash nahi ho sakti, aur grahak ko "nahi mila" dikhana
+ * sab se bura jawab hai. Ye ek hi baar hota hai; us ke baad sab paas hai.
+ */
+async function fetchMore(uid, rerender, all = false) {
+  if (fetching || !cache?.cursor) return
+  fetching = true
+  try {
+    do {
+      const next = await loadMorePublicProducts(uid, cache.cursor)
+      cache = {
+        ...cache,
+        products: [...cache.products, ...next.products],
+        cursor: next.cursor,
+      }
+    } while (all && cache.cursor)
+  } catch {
+    cache = { ...cache, cursor: null } // aage koshish na karte rahein
+  } finally {
+    fetching = false
+    rerender()
+  }
+}
 
 export function renderCatalog(root, uid, rerender) {
   // Naya shop → purana sab kuch phenk do.
@@ -99,18 +127,14 @@ export function renderCatalog(root, uid, rerender) {
       <div class="pad" style="padding-top:0">
         ${
           visible.length
-            ? `<ul class="pgrid">${visible
-                .slice(0, ui.shown)
-                .map((p) => card(p, currency))
-                .join('')}</ul>
+            ? `<ul class="pgrid">${visible.map((p) => card(p, currency)).join('')}</ul>
                ${
-                 visible.length > ui.shown
-                   ? `<button class="btn btn--secondary btn--full" data-show-more
-                        style="margin-top:12px">${esc(
-                          t('products.showMore', {
-                            count: Math.min(visible.length - ui.shown, PAGE),
-                          }),
-                        )}</button>`
+                 shop.cursor
+                   ? `<div class="morebar" data-more-sentinel>
+                        <button class="btn btn--secondary btn--full" data-show-more>
+                          ${esc(t('catalog.showMore'))}
+                        </button>
+                      </div>`
                    : ''
                }`
             : shop.products.length
@@ -128,29 +152,25 @@ export function renderCatalog(root, uid, rerender) {
   on(root, 'click', '[data-catfilter]', (_e, el) => {
     const value = el.dataset.catfilter
     ui.categoryId = ui.categoryId === value ? 'all' : value
-    ui.shown = PAGE
     rerender()
   })
 
   on(root, 'click', '[data-instock]', () => {
     ui.inStockOnly = !ui.inStockOnly
-    ui.shown = PAGE
     rerender()
   })
 
-  on(root, 'click', '[data-show-more]', () => {
-    ui.shown += PAGE
-    rerender()
-  })
+  on(root, 'click', '[data-show-more]', () => fetchMore(uid, rerender))
 
   const search = root.querySelector('#cq')
   if (search) {
     let timer
     search.addEventListener('input', (e) => {
       ui.query = e.target.value
-      ui.shown = PAGE
       clearTimeout(timer)
       timer = setTimeout(() => {
+        // Talash poore maal par honi chahiye, sirf us par nahi jo aa chuka hai.
+        if (ui.query.trim() && cache?.cursor) fetchMore(uid, rerender, true)
         rerender()
         const next = root.querySelector('#cq')
         if (next) {
@@ -160,6 +180,9 @@ export function renderCatalog(root, uid, rerender) {
       }, 180)
     })
   }
+
+  // Neeche pahunchte hi agla safha khud aa jata hai.
+  autoLoadMore(root, () => fetchMore(uid, rerender))
 
   // Tasveerein baad me — list foran nazar aani chahiye.
   for (const el of root.querySelectorAll('[data-pubimage]')) {
@@ -253,7 +276,6 @@ function resetFilters() {
   ui.query = ''
   ui.categoryId = 'all'
   ui.inStockOnly = false
-  ui.shown = PAGE
 }
 
 /** Sign-in/sign-out par purana catalog na reh jaye. */

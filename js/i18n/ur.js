@@ -61,6 +61,9 @@ export const ur = {
   'auth.signIn': 'سائن ان',
   'auth.signUp': 'اکاؤنٹ بنائیں',
   'auth.toSignUp': 'پہلی بار؟ اپنی دکان کا اکاؤنٹ بنائیں',
+  'auth.forgot': 'پاس ورڈ بھول گئے؟',
+  'auth.forgotNeedEmail': 'پہلے اپنا ای میل لکھیں، پھر یہ دبائیں۔',
+  'auth.forgotSent': 'اگر اس ای میل پر اکاؤنٹ ہے تو ری سیٹ لنک بھیج دیا گیا ہے۔',
   'auth.toSignIn': 'اکاؤنٹ پہلے سے ہے؟ سائن ان کریں',
   'auth.signOut': 'سائن آؤٹ',
   'auth.signedInAs': '{email} کے طور پر سائن ان',
@@ -121,6 +124,7 @@ export const ur = {
   'home.backupTitle': 'بیک اپ محفوظ کریں',
   'catalog.tagline': 'دیکھیں دکان میں کیا ہے',
   'catalog.inStockOnly': 'صرف موجود مال',
+  'catalog.showMore': 'مزید اشیاء دکھائیں',
   'catalog.outOfStock': 'ختم',
   'catalog.searchPlaceholder': 'اشیاء تلاش کریں',
   'catalog.empty': 'ابھی کچھ نمائش پر نہیں',
@@ -337,6 +341,8 @@ export const ur = {
   'settings.restoreDesc':
     'بیک اپ فائل واپس آپ کی دکان میں لوڈ کرتا ہے۔ تصاویر اور اسٹاک ہسٹری بھی واپس آ جاتی ہیں۔',
   'settings.restoreInvalid': 'یہ فائل کریانہ شاپ کا بیک اپ نہیں ہے',
+  'settings.restoreNewer':
+    'یہ بیک اپ ایپ کے نئے ورژن سے بنا ہے۔ پہلے ایپ اپ ڈیٹ کریں، پھر بحال کریں۔',
   'settings.restoreMode': 'اس فائل میں {products} پروڈکٹس ہیں۔ کیسے لوڈ کریں؟',
   'settings.restoreMerge': 'موجودہ کے ساتھ شامل کریں',
   'settings.restoreMergeDesc': 'آپ کے موجودہ پروڈکٹس رہیں گے اور فائل کا ڈیٹا اوپر شامل ہو گا',

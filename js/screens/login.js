@@ -1,8 +1,8 @@
-import { esc, $ } from '../lib/dom.js'
+import { esc, $, toast } from '../lib/dom.js'
 import { t } from '../i18n/index.js'
 import { field } from '../components.js'
 import { navigate } from '../lib/router.js'
-import { signIn, signUp, authErrorKey } from '../firebase.js'
+import { signIn, signUp, sendPasswordReset, authErrorKey } from '../firebase.js'
 
 /**
  * Login / account banane ka form. Site khulne par ye seedha nazar nahi aata —
@@ -49,6 +49,12 @@ export function renderLogin(root, initialMode = 'signin') {
           </button>
         </form>
 
+        ${
+          isSignUp
+            ? ''
+            : `<button class="auth__switch" id="auth-forgot">${esc(t('auth.forgot'))}</button>`
+        }
+
         <button class="auth__switch" id="auth-switch">
           ${esc(isSignUp ? t('auth.toSignIn') : t('auth.toSignUp'))}
         </button>
@@ -60,6 +66,34 @@ export function renderLogin(root, initialMode = 'signin') {
       mode = isSignUp ? 'signin' : 'signup'
       error = ''
       draw()
+    })
+
+    /*
+     * Password bhool jane ka raasta.
+     *
+     * `sendPasswordReset()` code me pehle se mojood tha magar app me us tak
+     * pahunchne ka koi zariya nahi tha — yaani password bhoolne wale ka account
+     * hamesha ke liye band, aur us ke saath poora data. Ye us dukandar ke liye
+     * hai jis ke paas backup file bhi na ho.
+     */
+    $('#auth-forgot', root)?.addEventListener('click', async () => {
+      const email = $('#auth-email', root).value.trim()
+      if (!email) {
+        error = t('auth.forgotNeedEmail')
+        draw()
+        return
+      }
+      try {
+        await sendPasswordReset(email)
+        // Yeh jaan boojh kar nahi batata ke email account par hai ya nahi —
+        // warna koi bhi shakhs email daal kar pata kar sakta hai ke kaun sa
+        // account mojood hai.
+        toast(t('auth.forgotSent'))
+      } catch (err) {
+        error = t(authErrorKey(err?.code))
+        draw()
+        $('#auth-email', root).value = email
+      }
     })
 
     $('#auth-form', root).addEventListener('submit', async (e) => {

@@ -61,6 +61,9 @@ export const en = {
   'auth.signIn': 'Sign in',
   'auth.signUp': 'Create account',
   'auth.toSignUp': 'First time? Create your shop account',
+  'auth.forgot': 'Forgot your password?',
+  'auth.forgotNeedEmail': 'Type your email first, then tap this.',
+  'auth.forgotSent': 'If that email has an account, a reset link is on its way.',
   'auth.toSignIn': 'Already have an account? Sign in',
   'auth.signOut': 'Sign out',
   'auth.signedInAs': 'Signed in as {email}',
@@ -121,6 +124,7 @@ export const en = {
   'home.backupTitle': 'Save a backup',
   'catalog.tagline': 'Browse what the shop has',
   'catalog.inStockOnly': 'In stock only',
+  'catalog.showMore': 'Show more products',
   'catalog.outOfStock': 'Out of stock',
   'catalog.searchPlaceholder': 'Search products',
   'catalog.empty': 'Nothing on show yet',
@@ -337,6 +341,8 @@ export const en = {
   'settings.restoreDesc':
     'Loads a backup file back into your shop. Photos and stock history come back too.',
   'settings.restoreInvalid': 'This file is not a Karyana Shop backup',
+  'settings.restoreNewer':
+    'This backup was made by a newer version of the app. Update the app first, then restore.',
   'settings.restoreMode': 'This file has {products} products. How should we load it?',
   'settings.restoreMerge': 'Add to what I have',
   'settings.restoreMergeDesc': 'Keeps your current products and adds the file on top',
