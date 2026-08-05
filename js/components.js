@@ -5,7 +5,7 @@
 import { esc, escAttr } from './lib/dom.js'
 import { t, unitLabel, localizedName } from './i18n/index.js'
 import { formatMoney } from './lib/format.js'
-import { formatQty, formatPackSize, priceUnitLabel } from './lib/units.js'
+import { formatQty, formatPackSizeShort, priceUnitLabel } from './lib/units.js'
 
 // ------------------------------------------------------------------ icons
 
@@ -118,21 +118,42 @@ export function stockBadge(p) {
  * hai aur `data-image` dekh kar screen baad me tasveer bhar deti hai. Purane
  * products me tasveer document ke andar hi hoti thi — wo bhi chalti hai.
  */
+/**
+ * Packet me kitna hai — "2 L" jaisa chhota nishan tasveer ke kone me.
+ *
+ * Pehle ye naam ke neeche likha jata tha ("1.5 L each") jahan brand aur baqi
+ * tafseel ke saath dab jata tha. 2 litre ki bottle aur 500 ml ki bottle me
+ * farq ek nazar me dikhna chahiye — is liye ab seedha tasveer par.
+ */
+export function packBadge(product) {
+  const size = formatPackSizeShort(product)
+  return size ? `<span class="packbadge">${esc(size)}</span>` : ''
+}
+
+/**
+ * Badge thumb ke BAHAR baithta hai, andar nahi.
+ *
+ * Tasveer baad me `fillImages()` bharta hai aur wo thumb ka andar ka hissa
+ * poora badal deta hai — badge andar hota to tasveer aate hi gayab ho jata.
+ */
 function thumb(product, fallback, big = false) {
   const cls = big ? 'thumb thumb--lg' : 'thumb'
+  const badge = packBadge(product)
+
+  let inner
   if (product.image) {
-    return `<div class="${cls}"><img src="${escAttr(product.image)}" alt="" loading="lazy"></div>`
+    inner = `<div class="${cls}"><img src="${escAttr(product.image)}" alt="" loading="lazy"></div>`
+  } else if (product.imageId) {
+    inner = `<div class="${cls}" data-image="${escAttr(product.imageId)}">${esc(fallback || '📦')}</div>`
+  } else {
+    inner = `<div class="${cls}">${esc(fallback || '📦')}</div>`
   }
-  if (product.imageId) {
-    return `<div class="${cls}" data-image="${escAttr(product.imageId)}">${esc(fallback || '📦')}</div>`
-  }
-  return `<div class="${cls}">${esc(fallback || '📦')}</div>`
+
+  if (!badge) return inner
+  return `<div class="thumbwrap">${inner}${badge}</div>`
 }
 
 export function productCard(product, { categoryIcon, currency }) {
-  // Pack products par "1.5 L each" — warna sirf naam se pata nahi chalta.
-  const packSize = formatPackSize(product, unitLabel)
-
   return `
     <div class="pcard">
       <button class="pcard__main" data-open="${escAttr(product.id)}">
@@ -142,11 +163,7 @@ export function productCard(product, { categoryIcon, currency }) {
             <p class="bold truncate">${esc(localizedName(product))}</p>
             ${statusBadge(product)}
           </div>
-          <p class="small muted truncate">
-            ${product.brand ? esc(product.brand) : ''}
-            ${product.brand && packSize ? ' · ' : ''}
-            ${packSize ? esc(t('form.packEach', { size: packSize })) : ''}
-          </p>
+          ${product.brand ? `<p class="small muted truncate">${esc(product.brand)}</p>` : ''}
           <p class="small" style="margin-top:2px">
             <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
             <span class="faint"> / ${esc(priceUnitLabel(product, unitLabel))}</span>
@@ -200,17 +217,14 @@ export function quickStock(product) {
  * jinhe naam aur stock tezi se scan karna ho, un ke liye list view.
  */
 export function productGridCard(product, { categoryIcon, currency }) {
-  const packSize = formatPackSize(product, unitLabel)
   const out = (product.stockQty || 0) <= 0
 
   return `
     <div class="gcard">
       <button class="gcard__main" data-open="${escAttr(product.id)}">
-        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}</div>
+        <div class="gcard__thumb">${thumbInner(product, categoryIcon)}${packBadge(product)}</div>
         <p class="gcard__name" dir="auto">${esc(localizedName(product))}</p>
-        <p class="gcard__sub truncate">
-          ${packSize ? esc(t('form.packEach', { size: packSize })) : product.brand ? esc(product.brand) : '&nbsp;'}
-        </p>
+        <p class="gcard__sub truncate">${product.brand ? esc(product.brand) : '&nbsp;'}</p>
         <p class="gcard__price">
           <span class="price">${esc(formatMoney(product.salePrice, currency))}</span>
           <span class="faint tiny"> / ${esc(priceUnitLabel(product, unitLabel))}</span>

@@ -615,6 +615,25 @@ input[type='checkbox'] {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* Pakar kar khisakne ka ishara — aur khisakte waqt text select na ho. */
+.catchips,
+.chips,
+.tagideas__row {
+  cursor: grab;
+}
+.catchips.dragging,
+.chips.dragging,
+.tagideas__row.dragging {
+  cursor: grabbing;
+  user-select: none;
+  scroll-behavior: auto;
+}
+.catchips.dragging *,
+.chips.dragging *,
+.tagideas__row.dragging * {
+  pointer-events: none;
+}
+
 .catchip {
   min-height: 40px;
   padding: 7px 11px;
@@ -931,6 +950,45 @@ input[type='checkbox'] {
   font-size: 1.6rem;
   overflow: hidden;
 }
+/*
+ * Packet ka naap tasveer ke kone me — "2 L", "500 g".
+ *
+ * Naam ke neeche ye brand aur baqi tafseel me dab jata tha. 2 litre aur 500 ml
+ * ki bottle me farq ek nazar me dikhna chahiye, is liye seedha tasveer par.
+ */
+.thumbwrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+}
+.gcard__thumb {
+  position: relative;
+}
+.packbadge {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-start: 4px;
+  z-index: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  /* Halki tasveer par bhi parha ja sake. */
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+/* Grid ki bari tasveer par thora bara nishan. */
+.gcard__thumb .packbadge {
+  inset-block-start: 6px;
+  inset-inline-start: 6px;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+}
+
 .thumb--lg {
   width: 96px;
   height: 96px;

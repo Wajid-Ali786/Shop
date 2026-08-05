@@ -26,6 +26,7 @@ import {
 import { formatMoney } from '../lib/format.js'
 import { compressImage } from '../lib/images.js'
 import { suggestTags } from '../lib/search.js'
+import { wireDragScroll } from '../lib/dragscroll.js'
 
 /**
  * Function hai, constant nahi — aur ye ahem hai.
@@ -191,6 +192,7 @@ export function renderProductForm(root, productId) {
       </div>`
 
     wire()
+    wireDragScroll(root)
   }
 
   // ------------------------------------------------------------- sell-by

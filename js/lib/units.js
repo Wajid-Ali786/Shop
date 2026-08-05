@@ -115,6 +115,26 @@ export function formatQty(qty, product, unitLabel) {
 }
 
 /** "1.5 L each" — pack ke andar kitna hai. Size na ho to kuch nahi. */
+/**
+ * Naap ka chhota nishan — jaisa bottle par likha hota hai.
+ *
+ * `unitLabel` poora lafz deta hai ("litre"), jo jumle me theek hai magar
+ * tasveer ke kone wale nishan me bohat lamba. Bottle par bhi "2 L" hi likha
+ * hota hai, is liye wahi. Ye chaar nishan har zabaan me ek jaise hain, is
+ * liye tarjuma nahi hota.
+ */
+const SHORT_UNITS = { ml: 'ml', l: 'L', g: 'g', kg: 'kg' }
+
+export function shortUnit(unit) {
+  return SHORT_UNITS[unit] || unit || ''
+}
+
+/** Packet me kitna hai, chhote nishan ke saath — "2 L", "500 g". */
+export function formatPackSizeShort(product) {
+  if (!isPack(product) || !product?.packSize || !product?.packUnit) return ''
+  return `${round3(product.packSize)} ${shortUnit(product.packUnit)}`
+}
+
 export function formatPackSize(product, unitLabel) {
   if (!isPack(product) || !product?.packSize || !product?.packUnit) return ''
   return `${round3(product.packSize)} ${unitLabel(product.packUnit)}`
