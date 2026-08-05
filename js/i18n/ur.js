@@ -135,7 +135,7 @@ export const ur = {
   'settings.catalogOn': 'چالو',
   'settings.catalogOff': 'بند',
   'settings.catalogSafety':
-    'صرف نام، تصویر اور بیچنے کا ریٹ باہر جاتا ہے۔ آپ کا خرید ریٹ، تھوک ریٹ اور اسٹاک کی گنتی کبھی عام نہیں ہوتی۔',
+    'صرف نام، تصویر، بیچنے کا ریٹ اور کتنا مال پڑا ہے یہ باہر جاتا ہے۔ آپ کا خرید ریٹ، چھپے ہوئے سرچ ٹیگ، بارکوڈ اور اسٹاک ہسٹری کبھی عام نہیں ہوتی۔',
   'settings.catalogRepublish': 'دوبارہ شائع کریں',
   'settings.backupReminder': 'بیک اپ کی یاد دہانی',
   'settings.backupReminderDays': 'ہر {days} دن بعد',
@@ -350,6 +350,16 @@ export const ur = {
   'settings.restoreReplaceDesc': 'پہلے موجودہ پروڈکٹس ڈیلیٹ ہوں گے، پھر فائل لوڈ ہو گی',
   'settings.restoring': 'بحال ہو رہا ہے…',
   'settings.restored': '{products} پروڈکٹس اور {categories} کیٹیگریز بحال ہو گئیں',
+  'settings.install': 'ایپ انسٹال کریں',
+  'settings.installDesc':
+    'کریانہ شاپ کو اپنی ہوم اسکرین پر لگائیں۔ یہ عام ایپ کی طرح پوری اسکرین پر کھلتی ہے اور انٹرنیٹ کے بغیر بھی چلتی ہے۔',
+  'settings.installBtn': 'اس فون پر انسٹال کریں',
+  'settings.installStarted': 'انسٹال ہو رہی ہے — ہوم اسکرین پر آئیکن دیکھیں',
+  'settings.installDone': 'ایپ اس فون پر انسٹال ہو چکی ہے',
+  'settings.installIos':
+    'سفاری میں نیچے شیئر کا بٹن دبائیں، پھر "Add to Home Screen" چنیں۔',
+  'settings.installManual':
+    'اپنے براؤزر کا مینو (⋮) کھولیں اور "Install app" یا "Add to Home screen" چنیں۔',
   'settings.about': 'ایپ کے بارے میں',
   'settings.aboutCloud':
     'آپ کا ڈیٹا آپ کے اپنے فائربیس پروجیکٹ میں محفوظ ہے، اس لیے آپ اپنے لاگ اِن سے کسی بھی فون سے یہ دکان کھول سکتے ہیں۔ ایپ انٹرنیٹ کے بغیر بھی چلتی ہے اور کنکشن آنے پر خود سیو کر دیتی ہے۔',

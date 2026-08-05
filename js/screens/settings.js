@@ -19,6 +19,7 @@ import { currentEmail, signOut } from '../firebase.js'
 import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
 import { chooseModal, alertModal, confirmModal } from '../lib/modal.js'
 import { runBackup } from '../lib/backup.js'
+import { installState, promptInstall, onInstallChange } from '../lib/install.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -46,6 +47,8 @@ export function renderSettings(root, rerender) {
              <button class="choice${theme === 'system' ? ' choice--active' : ''}" data-theme="system">⚙️ ${esc(t('settings.themeSystem'))}</button>
            </div>`,
         )}
+
+        ${installSection()}
 
         ${section(
           '',
@@ -158,6 +161,16 @@ export function renderSettings(root, rerender) {
         )}
       </div>
     </div>`
+
+  // ---- app install ----
+  on(root, 'click', '[data-install]', async (_e, el) => {
+    el.disabled = true
+    const outcome = await promptInstall()
+    el.disabled = false
+    if (outcome === 'accepted') toast(t('settings.installStarted'))
+    // 'dismissed' par kuch nahi kehte — dukandar ne khud mana kiya hai.
+    rerender()
+  })
 
   // ---- language / theme ----
   on(root, 'click', '[data-lang]', (_e, el) => {
@@ -308,6 +321,37 @@ export function renderSettings(root, rerender) {
       toast(t('error.generic'))
     }
   })
+
+  // Install ka mauqa aksar screen banne ke BAAD milta hai — us waqt button
+  // khud aa jana chahiye, warna dukandar ko sirf hidayat nazar aati rehti hain.
+  return onInstallChange(rerender)
+}
+
+/**
+ * "App install karein" — home screen par icon.
+ *
+ * Chaar halatein hain aur teen me koi button hi nahi hota: iPhone par Safari
+ * install ka mauqa deta hi nahi (sirf Share menu se hota hai), aur baqi
+ * browsers me mauqa aane se pehle sirf tareeqa bataya ja sakta hai. Is liye
+ * har soorat me kuch na kuch likha hota hai — khali dabba kabhi nahi.
+ */
+function installSection() {
+  const stateName = installState()
+
+  const body =
+    stateName === 'installed'
+      ? `<p class="small" style="margin:0">✅ ${esc(t('settings.installDone'))}</p>`
+      : stateName === 'ready'
+        ? `<p class="small muted" style="margin-bottom:12px">${esc(t('settings.installDesc'))}</p>
+           <button class="btn btn--primary btn--full" data-install>
+             ⬇️ ${esc(t('settings.installBtn'))}
+           </button>`
+        : `<p class="small muted" style="margin-bottom:8px">${esc(t('settings.installDesc'))}</p>
+           <p class="field__hint">${esc(
+             stateName === 'ios' ? t('settings.installIos') : t('settings.installManual'),
+           )}</p>`
+
+  return section(t('settings.install'), `<div class="card">${body}</div>`)
 }
 
 function bindSetting(root, selector, key, transform) {

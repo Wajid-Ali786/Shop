@@ -17,6 +17,10 @@ import {
 } from './store.js'
 import { bottomNav, NAV_PATHS, loading } from './components.js'
 import { enablePullRefresh } from './lib/pull-refresh.js'
+// Sirf side-effect ke liye: install ka mauqa (`beforeinstallprompt`) sirf ek
+// dafa aata hai aur aksar Settings khulne se bohat pehle. Boot par sun'na
+// zaroori hai, warna wo mauqa zaya ho jata hai aur button kabhi nahi aata.
+import './lib/install.js'
 
 import { renderWelcome } from './screens/welcome.js'
 import { renderCatalog, resetCatalog } from './screens/catalog.js'
