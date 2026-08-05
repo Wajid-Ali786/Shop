@@ -6,6 +6,7 @@ import { searchProducts } from '../lib/search.js'
 import { icon, empty, loading, productCard, productGridCard, fillImages } from '../components.js'
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
+import { wireDragScroll } from '../lib/dragscroll.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
 const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showArchived: false }
@@ -94,6 +95,7 @@ export function renderProducts(root, rerender) {
     <button class="fab" data-add aria-label="${escAttr(t('home.quickAdd'))}">+</button>`
 
   wire(root, rerender)
+  wireDragScroll(root)
   fillImages(root, loadImage)
 }
 

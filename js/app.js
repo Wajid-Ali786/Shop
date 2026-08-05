@@ -124,17 +124,20 @@ function render() {
     // sign in/out par ye dobara khul jata hai — neeche watchAuth dekhein.
     if (!publicShop.checked && !publicShop.asking) {
       publicShop.asking = true
-      defaultPublicShopUid()
-        .then((uid) => {
-          publicShop = { uid: uid || null, checked: true, asking: false }
-          if (uid) render()
-        })
-        .catch(() => {
-          publicShop = { uid: null, checked: true, asking: false }
-        })
+      askPublicShop()
     }
 
-    // Catalog chalu nahi hai — sada welcome screen.
+    // Jawab aane tak INTEZAR — welcome screen nahi.
+    //
+    // Pehle yahan seedha welcome likh diya jata tha aur jawab aane par catalog
+    // aata tha. Nateeja ye ke har reload par pehle welcome jhalakta tha aur
+    // phir products — jaise app do dafa khul rahi ho.
+    if (!publicShop.checked) {
+      root.innerHTML = loading()
+      return
+    }
+
+    // Poochh liya, koi catalog nahi mila — sada welcome screen.
     renderWelcome(root)
     return
   }
@@ -171,6 +174,43 @@ function render() {
   root.querySelectorAll('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => navigate(btn.dataset.nav))
   })
+}
+
+/**
+ * Poochta hai ke home page kis dukan ka catalog dikhaye.
+ *
+ * Jawab ka intezar spinner ke saath hota hai, is liye ye hamesha khatam hona
+ * chahiye. Firestore offline ho to us ki apni koshish bohat der chal sakti hai
+ * — us soorat me spinner atka reh jata. Is liye teen second ki hadd rakhi hai:
+ * us ke baad welcome screen dikha dete hain, aur asli jawab baad me aa jaye to
+ * catalog khud lag jata hai.
+ */
+function askPublicShop() {
+  let settled = false
+  const settle = (uid) => {
+    if (settled) return
+    settled = true
+    publicShop = { uid: uid || null, checked: true, asking: false }
+    render()
+  }
+
+  const giveUp = setTimeout(() => settle(null), 3000)
+
+  defaultPublicShopUid()
+    .then((uid) => {
+      clearTimeout(giveUp)
+      // Waqt guzar chuka ho aur jawab me dukan mili ho to ab bhi laga dete hain.
+      if (settled && uid) {
+        publicShop = { uid, checked: true, asking: false }
+        render()
+        return
+      }
+      settle(uid)
+    })
+    .catch(() => {
+      clearTimeout(giveUp)
+      settle(null)
+    })
 }
 
 function routeTo(path, screen) {

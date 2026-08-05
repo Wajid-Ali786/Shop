@@ -4,7 +4,8 @@ import { navigate } from '../lib/router.js'
 import { loadPublicShop, loadPublicImage } from '../store.js'
 import { loading, empty } from '../components.js'
 import { formatMoney } from '../lib/format.js'
-import { formatPackSize, formatQty, priceUnitLabel } from '../lib/units.js'
+import { formatPackSizeShort, formatQty, priceUnitLabel } from '../lib/units.js'
+import { wireDragScroll } from '../lib/dragscroll.js'
 
 /**
  * Grahak wali list — bina login ke.
@@ -119,6 +120,8 @@ export function renderCatalog(root, uid, rerender) {
       </div>
     </div>`
 
+  wireDragScroll(root)
+
   on(root, 'click', '[data-lang]', (_e, el) => setLang(el.dataset.lang))
   on(root, 'click', '[data-go]', (_e, el) => navigate(el.dataset.go))
 
@@ -221,7 +224,7 @@ function categoryChips(shop) {
  * baghair. Stock sirf parhne ke liye hai.
  */
 function card(p, currency) {
-  const packSize = formatPackSize(p, unitLabel)
+  const packSize = formatPackSizeShort(p)
   const out = (p.stockQty || 0) <= 0
 
   return `
@@ -230,9 +233,8 @@ function card(p, currency) {
         <div class="gcard__main" style="cursor:default">
           <div class="gcard__thumb">${
             p.imageId ? `<span data-pubimage="${escAttr(p.imageId)}">📦</span>` : '📦'
-          }</div>
+          }${packSize ? `<span class="packbadge">${esc(packSize)}</span>` : ''}</div>
           <p class="gcard__name" dir="auto">${esc(localizedName(p))}</p>
-          <p class="gcard__sub truncate">${packSize ? esc(packSize) : '&nbsp;'}</p>
           <p class="gcard__price">
             <span class="price">${esc(formatMoney(p.salePrice, currency))}</span>
             <span class="faint tiny"> / ${esc(priceUnitLabel(p, unitLabel))}</span>

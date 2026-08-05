@@ -81,6 +81,19 @@ Ye rules kehti hain: har user sirf apna shop data parh/likh sakta hai. Ye qadam
 chhod diya to ya to app chalegi hi nahi, ya (test mode me) aap ka data har kisi
 ke liye khula ho jayega.
 
+> ### ⚠️ App update karne ke baad rules DOBARA publish karein
+>
+> `firestore.rules` file waqt ke saath badalti hai — jab app me koi nayi cheez
+> aati hai jise Firestore me nayi ijazat chahiye hoti hai (maslan grahak wali
+> list, qadam 8).
+>
+> **Rules khud ba khud update nahi hoti.** Ye file repo me badal jati hai, lekin
+> Firebase me wahi purani chalti rehti hai jab tak aap khud paste kar ke Publish
+> na dabayein.
+>
+> Alamat: app ka koi naya hissa chalta hi nahi, ya laal banner aata hai, halanke
+> baqi sab theek kaam kar raha hota hai. Aisa lage to sab se pehle yahi dekhein.
+
 ---
 
 ## 5. Apni site ka domain authorize karein
@@ -121,6 +134,58 @@ Isi email/password se aap **kisi bhi phone ya computer** se apni dukan khol sakt
 
 ---
 
+## 8. Grahak wali list (marzi ki baat hai)
+
+Ye chalu karein to jo bhi aap ki site kholega — bina login ke — usay aap ki
+dukan ka maal nazar aayega: **tasveer, naam, qeemat aur stock**, saath me search,
+categories aur "sirf mojood maal" ka filter. Upar Login ka button rehta hai.
+
+Chalu karne ka tareeqa: **Settings → Grahak ki fehrist → Chalu**.
+
+### Aap ka munafa mehfooz rehta hai
+
+App grahak ko aap ke asal products **nahi** dikhati. Har product ki ek chhoti
+alag copy banti hai jis me sirf wo chaar cheezein hoti hain. In ka is copy tak
+koi raasta hi nahi:
+
+- khareed rate (cost price)
+- thok rate (wholesale price)
+- stock ki poori history (movements)
+- chhupe hue search tags, barcode, brand
+
+Chhupi hui aur "market se khatam" cheezein grahak ko nahi dikhtin.
+
+### Yaad rakhne ki baatein
+
+- **Rules dobara publish karni parengi** (qadam 4 ka warning box) — warna list
+  nahi chalegi.
+- **Band karne par** public copy poori mit jati hai. Aap ka apna data waisa hi
+  rehta hai.
+- Home page us dukan ki list dikhata hai jo sab se pehle catalog chalu kare. Aap
+  ki apni dukan ka link hamesha `.../Shop/#/shop/{aap-ka-user-id}` par bhi khulta
+  hai — ye link WhatsApp par grahakon ko bheja ja sakta hai.
+- Qeemat ya stock badalne par grahak wali list khud ba khud taza ho jati hai.
+  Kabhi shak ho to **Settings → Dobara shaya karein**.
+
+---
+
+## Backup
+
+Data Firebase me hai, is liye phone toot jaye ya kho jaye to kuch nahi jata.
+Backup us se bachata hai jo Firebase nahi rok sakta: **ghalti se koi cheez delete
+kar dena**, ya account tak rasai khatam ho jana.
+
+- **Settings → Backup** se ek file download ho jati hai (tasveerein aur poori
+  history samet).
+- Home screen par yaad-dihani ka card aata hai. **Kitne din baad aaye ye aap khud
+  chunte hain** — Settings me 7 / 14 / 30 / 60 din, ya bilkul band.
+- Wapas daalne ke do tareeqe hain. **"Milao"** maujooda data rakh kar file ka
+  data saath jor deta hai; **"Badlo"** sab kuch file wale data se badal deta hai.
+  "Badlo" pehle file ka data likhta hai aur phir bacha hua hatata hai, is liye
+  beech me internet chala jaye to bhi dukan khali nahi hoti.
+
+---
+
 ## Masle aur unka hal
 
 | Masla | Wajah aur hal |
@@ -130,6 +195,9 @@ Isi email/password se aap **kisi bhi phone ya computer** se apni dukan khol sakt
 | Login par `auth/unauthorized-domain` | Qadam 5 reh gaya — apna GitHub Pages domain add karein. |
 | Site khali safed | Browser ka console (F12) kholein. Aksar `js/config.js` khali reh jata hai. |
 | Site par purani version nazar aati hai | GitHub Pages ka cache. Hard refresh: `Ctrl+Shift+R` (phone par browser data clear). |
+| **Bina login welcome page hi aata hai, grahak wali list nahi** | Teen wajahein, isi tarteeb se dekhein: (1) rules purani hain — qadam 4 dobara karein; (2) Settings me catalog "Chalu" nahi kiya; (3) dukan me koi product hi nahi. |
+| Grahak wali list purani lag rahi hai | **Settings → Dobara shaya karein** dabayein. |
+| Home page kisi aur dukan ki list dikhata hai | Wo dukan pehle catalog chalu kar chuki hai. Apni dukan ka apna link `#/shop/{aap-ka-user-id}` hamesha chalta hai. |
 
 ---
 
