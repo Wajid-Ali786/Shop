@@ -860,20 +860,27 @@ export function khataTotals() {
   let people = 0
   // Jin logon ne apna paisa dukan me jama karaya hua hai un ka balance manfi
   // hota hai. Unhe "lena hai" me ginna sab se bara jhoot hoga, is liye alag.
-  let owed = 0
-  let owedPeople = 0
+  let deposit = 0
+  let depositPeople = 0
 
   for (const party of state.khataParties) {
     const balance = Number(party.balance || 0)
     if (balance > 0) {
       total += balance
       people += 1
-    } else if (balance < 0) {
-      owed += -balance
-      owedPeople += 1
+    }
+    const jama = Number(party.deposit || 0)
+    if (jama > 0) {
+      deposit += jama
+      depositPeople += 1
     }
   }
-  return { total: roundMoney(total), people, owed: roundMoney(owed), owedPeople }
+  return {
+    total: roundMoney(total),
+    people,
+    deposit: roundMoney(deposit),
+    depositPeople,
+  }
 }
 
 export async function createKhataParty(data) {
@@ -884,6 +891,15 @@ export async function createKhataParty(data) {
     categoryIds: data.categoryIds || [],
     // Naya khata hamesha sifar se shuru hota hai — raqam sirf entry se aati hai.
     balance: 0,
+    deposit: 0,
+    /*
+     * Jama karane ka option har khate par nahi.
+     *
+     * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool button
+     * lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar khud
+     * chalu karta hai — us khaas grahak ke liye.
+     */
+    hasDeposit: Boolean(data.hasDeposit),
     status: 'active',
     lastEntryAt: null,
     createdAt: serverTimestamp(),
@@ -893,9 +909,9 @@ export async function createKhataParty(data) {
 }
 
 export async function updateKhataParty(id, changes) {
-  // `balance` yahan se kabhi nahi badalta — wo sirf entry likhne par badalta
-  // hai. Warna ek edit poori history ko jhoota kar deta.
-  const { balance, ...safe } = changes
+  // `balance` aur `deposit` yahan se kabhi nahi badalte — wo sirf entry likhne
+  // par badalte hain. Warna ek edit poori history ko jhoota kar deta.
+  const { balance, deposit, ...safe } = changes
   await updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() })
 }
 
@@ -989,11 +1005,34 @@ export async function seedKhataCategories() {
  * saaf karwa lete hain. Aisi soorat me balance MANFI ho jata hai — jis ka
  * matlab hai dukandar ne dena hai, lena nahi.
  */
-export const KHATA_KINDS = { udhaar: 1, wapas: 1, milay: -1, jama: -1 }
+/**
+ * Har qism kis hisaab ko chhuti hai, aur kis simt me.
+ *
+ * DO ALAG hisaab hain, ek nahi:
+ *
+ *   `balance` — udhaar. Grahak ne dukan ka kitna dena hai.
+ *   `deposit` — jama. Grahak ka apna paisa jo dukan me para hai.
+ *
+ * Inhein milana ghalat tha. Ek shakhs ne Rs 500 ka udhaar liya ho aur Rs 2000
+ * jama karaye hon, to "Rs 1500 dukandar ne dena hai" likhna dono baaton ko
+ * chhupa deta hai — na udhaar nazar aata hai na jama. Dukandar ko dono alag
+ * chahiyen, kyunki wo dono cheezein alag hain.
+ */
+export const KHATA_KINDS = {
+  udhaar: { field: 'balance', sign: 1 },
+  milay: { field: 'balance', sign: -1 },
+  jama: { field: 'deposit', sign: 1 },
+  wapas: { field: 'deposit', sign: -1 },
+}
 
 /** Barhne wali simt (+1) ya ghatne wali (−1). */
 export function khataSign(kind) {
-  return KHATA_KINDS[kind] ?? 1
+  return KHATA_KINDS[kind]?.sign ?? 1
+}
+
+/** Ye qism kaun sa hisaab chhuti hai — 'balance' (udhaar) ya 'deposit' (jama). */
+export function khataField(kind) {
+  return KHATA_KINDS[kind]?.field ?? 'balance'
 }
 
 /** Purane records me sirf `type` tha ('diya'/'mila') — unhe bhi parhna hai. */
@@ -1031,6 +1070,7 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
     ...(offline ? { offline: true } : {}),
   })
 
+  const target = khataField(kind)
   const nextBalance = (current) => roundMoney(current + khataSign(kind) * value)
 
   if (navigator.onLine) {
@@ -1039,9 +1079,9 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
         const snap = await tx.get(partyRef)
         if (!snap.exists()) throw new Error('Khata nahi mila')
 
-        const balanceAfter = nextBalance(Number(snap.data().balance || 0))
+        const balanceAfter = nextBalance(Number(snap.data()[target] || 0))
         tx.update(partyRef, {
-          balance: balanceAfter,
+          [target]: balanceAfter,
           lastEntryAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         })
@@ -1061,10 +1101,10 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
   const local = khataPartyById(partyId)
   if (!local) throw new Error('Khata nahi mila')
 
-  const balanceAfter = nextBalance(Number(local.balance || 0))
+  const balanceAfter = nextBalance(Number(local[target] || 0))
   const batch = writeBatch(dbf)
   batch.update(partyRef, {
-    balance: balanceAfter,
+    [target]: balanceAfter,
     lastEntryAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -1096,12 +1136,16 @@ async function recalcParty(partyId) {
     .map(withId)
     .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt))
 
-  let running = 0
+  // Do alag zanjeerein: udhaar ki apni, jama ki apni. Har entry ka
+  // `balanceAfter` usi hisaab ka hai jise wo chhuti hai.
+  const running = { balance: 0, deposit: 0 }
   const ops = []
   for (const row of rows) {
-    running = roundMoney(running + khataSign(khataKindOf(row)) * Number(row.amount || 0))
-    if (row.balanceAfter !== running) {
-      const balanceAfter = running
+    const kind = khataKindOf(row)
+    const field = khataField(kind)
+    running[field] = roundMoney(running[field] + khataSign(kind) * Number(row.amount || 0))
+    if (row.balanceAfter !== running[field]) {
+      const balanceAfter = running[field]
       ops.push((batch) => batch.update(doc(col('khataEntries'), row.id), { balanceAfter }))
     }
   }
@@ -1109,7 +1153,8 @@ async function recalcParty(partyId) {
   const last = rows[rows.length - 1]
   ops.push((batch) =>
     batch.update(doc(col('khataParties'), partyId), {
-      balance: running,
+      balance: running.balance,
+      deposit: running.deposit,
       lastEntryAt: last ? last.createdAt : null,
       updatedAt: serverTimestamp(),
     }),
