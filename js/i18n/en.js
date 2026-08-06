@@ -231,6 +231,8 @@ export const en = {
   'khata.hasDeposit': 'Keeps money with me',
   'khata.hasDepositHint': 'Turn on for people who leave cash with you and draw it down',
 
+  'khata.jamaShort': 'deposit',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',

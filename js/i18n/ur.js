@@ -231,6 +231,8 @@ export const ur = {
   'khata.hasDeposit': 'میرے پاس پیسہ رکھتا ہے',
   'khata.hasDepositHint': 'اُن لوگوں کے لیے چالو کریں جو پیسہ رکھ کر تھوڑا تھوڑا لیتے ہیں',
 
+  'khata.jamaShort': 'جمع',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',

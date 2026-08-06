@@ -182,7 +182,15 @@ function filterParties() {
  * aur ab kuch baqi na ho.
  */
 function isSettled(party) {
-  return Number(party.balance || 0) === 0 && Boolean(party.lastEntryAt)
+  // Jama bhi dekhna zaroori hai. Jis shakhs ne Rs 5,000 dukan me rakhe hain aur
+  // udhaar kuch nahi, us ka `balance` sifar hota hai — sirf usay dekh kar app
+  // us khate ko "barabar ho chuka" samajh kar chhupa deti thi, aur dukandar ke
+  // paas para hua paisa rozana ki list se ghayab ho jata tha.
+  return (
+    Number(party.balance || 0) === 0 &&
+    Number(party.deposit || 0) === 0 &&
+    Boolean(party.lastEntryAt)
+  )
 }
 
 function settledToggle() {
@@ -246,6 +254,7 @@ function listOrEmpty(visible) {
 
 function partyRow(party) {
   const balance = Number(party.balance || 0)
+  const deposit = Number(party.deposit || 0)
   const cat = khataCategoryById((party.categoryIds || [])[0])
   const currency = state.settings.currency
 
@@ -268,11 +277,22 @@ function partyRow(party) {
         </span>
       </button>
       <div class="pcard__side">
-        <span class="khatabal${
-          balance > 0 ? ' khatabal--owed' : balance < 0 ? ' khatabal--advance' : ''
-        }" dir="ltr">
-          ${esc(formatMoney(Math.abs(balance), currency))}
-        </span>
+        <!--
+          Udhaar sifar ho magar jama para ho to wohi dikhana chahiye — warna
+          row par "Rs 0" likha aata hai aur us ka paisa kahin nazar nahi aata.
+        -->
+        ${
+          balance === 0 && deposit > 0
+            ? `<span class="khatabal khatabal--advance" dir="ltr">
+                 ${esc(formatMoney(deposit, currency))}
+               </span>
+               <span class="tiny muted">${esc(t('khata.jamaShort'))}</span>`
+            : `<span class="khatabal${
+                balance > 0 ? ' khatabal--owed' : balance < 0 ? ' khatabal--advance' : ''
+              }" dir="ltr">
+                 ${esc(formatMoney(Math.abs(balance), currency))}
+               </span>`
+        }
       </div>
       ${selecting ? '' : icon('chevron', 'flip')}
     </div>`

@@ -134,6 +134,37 @@ async function commitInChunks(ops) {
   }
 }
 
+/**
+ * Wahi kaam, magar offline atakta nahi.
+ *
+ * Firestore offline hone par `commit()` ka wada internet aane tak poora nahi
+ * karta — likhai local cache me FORAN ho jati hai, sirf server ki tasdeeq baqi
+ * rehti hai. Jo jagah us wade ka intezar karti hai wahan button hamesha ke
+ * liye ghoomta reh jata hai aur dukandar ko lagta hai kuch save hi nahi hua.
+ *
+ * Is liye offline me intezar nahi karte. Data phir bhi mehfooz hai: cache me
+ * likha ja chuka hai aur Firestore internet aate hi khud bhej deta hai.
+ */
+async function commitSoon(ops) {
+  if (navigator.onLine) return commitInChunks(ops)
+  commitInChunks(ops).catch(() => {})
+}
+
+/**
+ * Ek likhai, usi usool par.
+ *
+ * `updateDoc`/`deleteDoc` ka wada bhi offline poora nahi hota. Jo jagah us ka
+ * intezar karti hai wahan sheet band hi nahi hoti aur "Save" ghoomta reh jata
+ * hai — halankay likhai local cache me ho chuki hoti hai aur screen par nazar
+ * bhi aa rahi hoti hai. Ye TAB ahem hai jab dukandar ka internet aata jata ho,
+ * jo asal dukan me aam baat hai.
+ */
+function writeSoon(promise) {
+  if (navigator.onLine) return promise
+  promise.catch(() => {})
+  return Promise.resolve()
+}
+
 
 /** Paison ka hisaab — do hindse se aage jaane ka koi matlab nahi. */
 function roundMoney(value) {
@@ -912,7 +943,9 @@ export async function updateKhataParty(id, changes) {
   // `balance` aur `deposit` yahan se kabhi nahi badalte — wo sirf entry likhne
   // par badalte hain. Warna ek edit poori history ko jhoota kar deta.
   const { balance, deposit, ...safe } = changes
-  await updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() })
+  await writeSoon(
+    updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() }),
+  )
 }
 
 /** Khata mitane par us ki poori history bhi jati hai — warna kachra reh jata. */
@@ -920,7 +953,7 @@ export async function deleteKhataParty(id) {
   const snap = await getDocs(query(col('khataEntries'), where('partyId', '==', id)))
   const ops = [(batch) => batch.delete(doc(col('khataParties'), id))]
   for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
-  await commitInChunks(ops)
+  await commitSoon(ops)
 }
 
 // ---- khata categories (products wali se bilkul alag) ----
@@ -1172,7 +1205,7 @@ async function recalcParty(partyId) {
     }),
   )
 
-  await commitInChunks(ops)
+  await commitSoon(ops)
   return running
 }
 
@@ -1211,7 +1244,7 @@ export async function updateKhataEntry(entryId, changes) {
   if (changes.collectedBy !== undefined) patch.collectedBy = changes.collectedBy?.trim() || null
   if (changes.note !== undefined) patch.note = changes.note?.trim() || null
 
-  await updateDoc(ref, patch)
+  await writeSoon(updateDoc(ref, patch))
   return recalcParty(partyId)
 }
 
@@ -1222,7 +1255,7 @@ export async function deleteKhataEntry(entryId) {
   if (!snap.exists()) return 0
 
   const partyId = snap.data().partyId
-  await deleteDoc(ref)
+  await writeSoon(deleteDoc(ref))
   return recalcParty(partyId)
 }
 
@@ -1240,7 +1273,7 @@ export async function deleteKhataParties(ids) {
     for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
     ops.push((batch) => batch.delete(doc(col('khataParties'), id)))
   }
-  await commitInChunks(ops)
+  await commitSoon(ops)
   return ids.length
 }
 
