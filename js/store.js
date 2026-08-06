@@ -26,6 +26,7 @@ import {
   writeBatch,
   runTransaction,
   serverTimestamp,
+  Timestamp,
 } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js'
 
 import { dbf, currentUid } from './firebase.js'
@@ -1100,7 +1101,7 @@ export function khataKindOf(entry) {
   return entry?.type === 'mila' ? 'milay' : 'udhaar'
 }
 
-export async function addKhataEntry({ partyId, kind, amount, items, collectedBy, note }) {
+export async function addKhataEntry({ partyId, kind, amount, items, collectedBy, note, at }) {
   const value = roundMoney(Math.abs(Number(amount) || 0))
   if (!value) throw new Error('Raqam zaroori hai')
 
@@ -1125,7 +1126,14 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
     collectedBy: collectedBy?.trim() || null,
     note: note?.trim() || null,
     balanceAfter,
-    createdAt: serverTimestamp(),
+    /*
+     * Tareekh dukandar bhi chun sakta hai.
+     *
+     * Sham ko bahi khol kar din bhar ka likhna aam baat hai. Har entry par
+     * server ka waqt daal dena us soorat me jhoot ban jata hai — aur history
+     * ki tarteeb bhi ulat deta hai, kyunki wahi tarteeb ki bunyaad hai.
+     */
+    createdAt: at ? Timestamp.fromMillis(at) : serverTimestamp(),
     ...(offline ? { offline: true } : {}),
   })
 
@@ -1257,6 +1265,9 @@ export async function updateKhataEntry(entryId, changes) {
   }
   if (changes.collectedBy !== undefined) patch.collectedBy = changes.collectedBy?.trim() || null
   if (changes.note !== undefined) patch.note = changes.note?.trim() || null
+  // Tareekh badalne par tarteeb bhi badalti hai — is liye `recalcParty` neeche
+  // poori zanjeer dobara banata hai, sirf ye ek document nahi.
+  if (changes.at) patch.createdAt = Timestamp.fromMillis(changes.at)
 
   await writeSoon(updateDoc(ref, patch))
   return recalcParty(partyId)

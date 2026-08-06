@@ -336,6 +336,20 @@ function balanceLabel(value, currency, field = 'balance') {
   return t('khata.clear')
 }
 
+/**
+ * `datetime-local` ke liye waqt.
+ *
+ * Wo khana hamesha LOCAL waqt maangta hai aur `toISOString()` UTC deta hai —
+ * seedha daalne par Pakistan me har tareekh paanch ghante peeche chali jati.
+ * Is liye offset khud nikal kar lagate hain.
+ */
+function localInput(ms) {
+  if (!ms) return ''
+  const d = new Date(ms)
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 function defRow(label, value, dir = 'auto') {
   return `
     <div class="deflist__row">
@@ -405,6 +419,18 @@ function openEntrySheet(partyId, kind, existing = null) {
     ${field(
       t('khata.note'),
       `<input id="ke-note" dir="auto" value="${escAttr(existing?.note || '')}">`,
+    )}
+
+    <!--
+      Tareekh dukandar chun sakta hai. Sham ko bahi khol kar din bhar ka
+      likhna aam baat hai — us waqt har entry par aaj ka waqt lag jana history
+      ko ghalat kar deta hai.
+    -->
+    ${field(
+      t('khata.entryWhen'),
+      `<input id="ke-when" type="datetime-local" dir="ltr" value="${escAttr(
+        localInput(existing?.createdAt),
+      )}">`,
     )}
 
     <div id="ke-error"></div>
@@ -514,12 +540,15 @@ function openEntrySheet(partyId, kind, existing = null) {
     save.disabled = true
     save.innerHTML = '<span class="spinner spinner--sm"></span>'
 
+    const when = $('#ke-when', body).value
     const payload = {
       kind: selectedKind,
       amount,
       items,
       collectedBy: $('#ke-by', body).value,
       note: $('#ke-note', body).value,
+      // Khali chhora ho to abhi ka waqt — server tay karta hai.
+      at: when ? new Date(when).getTime() : undefined,
     }
 
     try {
