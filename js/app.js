@@ -296,11 +296,50 @@ function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return
   if (location.protocol !== 'http:' && location.protocol !== 'https:') return
 
+  /*
+   * Nayi version aane par batana.
+   *
+   * Update pehle bhi ho jata tha — magar KHAMOSHI se, aur sirf agli dafa app
+   * kholne par nazar aata tha. Jo dukandar app ghanton khuli rakhta hai use
+   * pata hi nahi chalta tha ke naya kaam aa chuka hai; saath hi naya service
+   * worker us chalti hui purani screen par qabza kar leta (`skipWaiting`), to
+   * purani JS aur nayi files mil sakti thin.
+   *
+   * `controllerchange` pehli dafa install par bhi chalta hai, jab koi purana
+   * controller hota hi nahi — us waqt "nayi version aa gayi" kehna jhoot hoga,
+   * is liye wo soorat pehle hi nikal dete hain.
+   */
+  const hadController = Boolean(navigator.serviceWorker.controller)
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) showUpdateBanner()
+  })
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       // Register na ho to app phir bhi chalti hai, bas offline support nahi hoga.
     })
   })
+}
+
+/** Ek dafa hi — dukandar band kar de to dobara na aaye. */
+let updateBannerShown = false
+
+function showUpdateBanner() {
+  if (updateBannerShown) return
+  updateBannerShown = true
+
+  const bar = document.createElement('div')
+  bar.className = 'updatebar'
+  bar.innerHTML = `
+    <span>${esc(t('app.updateReady'))}</span>
+    <button class="btn btn--sm btn--primary" data-reload>${esc(t('app.updateReload'))}</button>
+    <button class="updatebar__close" data-dismiss aria-label="${esc(t('common.close'))}">✕</button>`
+
+  // Reload par hi nayi files chalti hain — yehi asal amal hai.
+  bar.querySelector('[data-reload]').addEventListener('click', () => location.reload())
+  bar.querySelector('[data-dismiss]').addEventListener('click', () => bar.remove())
+
+  document.body.appendChild(bar)
 }
 
 function banners() {

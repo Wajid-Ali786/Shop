@@ -1,10 +1,11 @@
-import { esc, escAttr, on } from '../lib/dom.js'
+import { esc, escAttr, on, toast } from '../lib/dom.js'
 import { t, localizedName } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, khataTotals, khataCategoryById } from '../store.js'
+import { state, khataTotals, khataCategoryById, deleteKhataParties } from '../store.js'
 import { icon, empty, loading } from '../components.js'
 import { formatMoney } from '../lib/format.js'
 import { wireDragScroll } from '../lib/dragscroll.js'
+import { confirmModal } from '../lib/modal.js'
 import { PAGE_SIZE, moreBar, autoLoadMore, resetAutoLoad } from '../lib/paging.js'
 
 /**
@@ -16,6 +17,21 @@ import { PAGE_SIZE, moreBar, autoLoadMore, resetAutoLoad } from '../lib/paging.j
  */
 
 const ui = { query: '', categoryId: 'all', sort: 'recent', showSettled: false }
+
+/**
+ * Kai khate ek saath chunne ki halat.
+ *
+ * Bekaar khate jama ho jate hain aur ek ek kar ke mitana itna bora kaam hai ke
+ * koi karta hi nahi — list bhari rehti hai aur asal baqaya us me gum ho jata
+ * hai.
+ */
+let selecting = false
+let picked = new Set()
+
+function exitSelect() {
+  selecting = false
+  picked = new Set()
+}
 
 let shownCount = PAGE_SIZE
 
@@ -30,6 +46,11 @@ export function renderKhata(root, rerender) {
     return
   }
 
+  // Koi khata darmiyan me hat gaya (doosre phone se) to chuna na reh jaye.
+  for (const id of picked) {
+    if (!state.khataParties.some((p) => p.id === id)) picked.delete(id)
+  }
+
   const visible = filterParties()
   const totals = khataTotals()
 
@@ -38,10 +59,20 @@ export function renderKhata(root, rerender) {
       <div class="pad" style="padding-bottom:8px">
         <div class="card khatatotal">
           <p class="tiny muted">${esc(t('khata.totalOut'))}</p>
-          <p class="khatatotal__value" dir="ltr">${esc(
+          <p class="khatatotal__value khatatotal__value--owed" dir="ltr">${esc(
             formatMoney(totals.total, state.settings.currency),
           )}</p>
           <p class="small muted">${esc(t('khata.fromPeople', { count: totals.people }))}</p>
+          ${
+            totals.deposit > 0
+              ? `<p class="khatatotal__split">
+                   ${esc(t('khata.totalIn'))}
+                   <span class="tx__amount--in bold" dir="ltr">${esc(
+                     formatMoney(totals.deposit, state.settings.currency),
+                   )}</span>
+                 </p>`
+              : ''
+          }
         </div>
       </div>
 
@@ -58,6 +89,11 @@ export function renderKhata(root, rerender) {
 
       <div class="row row--between pad" style="padding-top:4px;padding-bottom:4px">
         <span class="tiny muted" id="k-count">${esc(t('khata.count', { count: visible.length }))}</span>
+        ${
+          state.khataParties.length && !selecting
+            ? `<button class="btn btn--ghost btn--sm" data-select-mode>${esc(t('khata.select'))}</button>`
+            : ''
+        }
         <select id="ksort" class="tiny"
           style="width:auto;border:0;background:transparent;padding:4px;color:var(--text-muted)">
           <option value="recent"${ui.sort === 'recent' ? ' selected' : ''}>${esc(t('khata.sortRecent'))}</option>
@@ -70,7 +106,21 @@ export function renderKhata(root, rerender) {
       ${settledToggle()}
     </div>
 
-    <button class="fab" data-add-party aria-label="${escAttr(t('khata.addParty'))}">+</button>`
+    ${
+      selecting
+        ? `<div class="selectbar">
+             <button class="btn btn--secondary btn--sm" data-select-cancel>
+               ${esc(t('common.cancel'))}
+             </button>
+             <span class="small bold" style="flex:1;text-align:center">
+               ${esc(t('khata.selected', { count: picked.size }))}
+             </span>
+             <button class="btn btn--danger btn--sm" data-select-delete ${
+               picked.size ? '' : 'disabled'
+             }>🗑️ ${esc(t('common.delete'))}</button>
+           </div>`
+        : `<button class="fab" data-add-party aria-label="${escAttr(t('khata.addParty'))}">+</button>`
+    }`
 
   wire(root, rerender)
   afterList(root, rerender)
@@ -199,8 +249,15 @@ function partyRow(party) {
   const cat = khataCategoryById((party.categoryIds || [])[0])
   const currency = state.settings.currency
 
+  const on = picked.has(party.id)
+
   return `
-    <div class="pcard">
+    <div class="pcard${selecting && on ? ' pcard--picked' : ''}">
+      ${
+        selecting
+          ? `<span class="pickbox${on ? ' pickbox--on' : ''}" aria-hidden="true">${on ? '✓' : ''}</span>`
+          : ''
+      }
       <button class="pcard__main" data-party="${escAttr(party.id)}">
         <span style="flex:1;min-width:0">
           <span class="bold truncate" dir="auto" style="display:block">${esc(party.name)}</span>
@@ -211,11 +268,13 @@ function partyRow(party) {
         </span>
       </button>
       <div class="pcard__side">
-        <span class="khatabal${balance > 0 ? ' khatabal--owed' : ''}" dir="ltr">
+        <span class="khatabal${
+          balance > 0 ? ' khatabal--owed' : balance < 0 ? ' khatabal--advance' : ''
+        }" dir="ltr">
           ${esc(formatMoney(Math.abs(balance), currency))}
         </span>
       </div>
-      ${icon('chevron', 'flip')}
+      ${selecting ? '' : icon('chevron', 'flip')}
     </div>`
 }
 
@@ -261,5 +320,45 @@ function wire(root, rerender) {
   })
 
   on(root, 'click', '[data-add-party]', () => navigate('/khata/new'))
-  on(root, 'click', '[data-party]', (_e, el) => navigate(`/khata/${el.dataset.party}`))
+
+  on(root, 'click', '[data-select-mode]', () => {
+    selecting = true
+    rerender()
+  })
+
+  on(root, 'click', '[data-select-cancel]', () => {
+    exitSelect()
+    rerender()
+  })
+
+  on(root, 'click', '[data-select-delete]', async () => {
+    const ids = [...picked]
+    if (!ids.length) return
+
+    const ok = await confirmModal({
+      title: t('khata.deleteParty'),
+      message: t('khata.deleteManyConfirm', { count: ids.length }),
+      confirmLabel: t('common.delete'),
+      danger: true,
+    })
+    if (!ok) return
+
+    try {
+      await deleteKhataParties(ids)
+      exitSelect()
+      toast(t('common.done'))
+    } catch {
+      toast(t('error.generic'))
+    }
+    rerender()
+  })
+
+  on(root, 'click', '[data-party]', (_e, el) => {
+    const id = el.dataset.party
+    // Chunne ki halat me tap khata kholta nahi — sirf nishan lagata hai.
+    if (!selecting) return navigate(`/khata/${id}`)
+    if (picked.has(id)) picked.delete(id)
+    else picked.add(id)
+    rerender()
+  })
 }

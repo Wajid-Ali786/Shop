@@ -858,14 +858,29 @@ export function khataCategoryById(id) {
 export function khataTotals() {
   let total = 0
   let people = 0
+  // Jin logon ne apna paisa dukan me jama karaya hua hai un ka balance manfi
+  // hota hai. Unhe "lena hai" me ginna sab se bara jhoot hoga, is liye alag.
+  let deposit = 0
+  let depositPeople = 0
+
   for (const party of state.khataParties) {
     const balance = Number(party.balance || 0)
     if (balance > 0) {
       total += balance
       people += 1
     }
+    const jama = Number(party.deposit || 0)
+    if (jama > 0) {
+      deposit += jama
+      depositPeople += 1
+    }
   }
-  return { total: roundMoney(total), people }
+  return {
+    total: roundMoney(total),
+    people,
+    deposit: roundMoney(deposit),
+    depositPeople,
+  }
 }
 
 export async function createKhataParty(data) {
@@ -876,6 +891,15 @@ export async function createKhataParty(data) {
     categoryIds: data.categoryIds || [],
     // Naya khata hamesha sifar se shuru hota hai — raqam sirf entry se aati hai.
     balance: 0,
+    deposit: 0,
+    /*
+     * Jama karane ka option har khate par nahi.
+     *
+     * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool button
+     * lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar khud
+     * chalu karta hai — us khaas grahak ke liye.
+     */
+    hasDeposit: Boolean(data.hasDeposit),
     status: 'active',
     lastEntryAt: null,
     createdAt: serverTimestamp(),
@@ -885,9 +909,9 @@ export async function createKhataParty(data) {
 }
 
 export async function updateKhataParty(id, changes) {
-  // `balance` yahan se kabhi nahi badalta — wo sirf entry likhne par badalta
-  // hai. Warna ek edit poori history ko jhoota kar deta.
-  const { balance, ...safe } = changes
+  // `balance` aur `deposit` yahan se kabhi nahi badalte — wo sirf entry likhne
+  // par badalte hain. Warna ek edit poori history ko jhoota kar deta.
+  const { balance, deposit, ...safe } = changes
   await updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() })
 }
 
@@ -964,7 +988,72 @@ export async function seedKhataCategories() {
  * lene koi aur aata hai (bachcha, mulazim, parosi). Wo naam yahan likha jata
  * hai, warna baad me jhagra hota hai ke "maine to liya hi nahi tha".
  */
-export async function addKhataEntry({ partyId, type, amount, items, collectedBy, note }) {
+/**
+ * Lein dein ki qismein.
+ *
+ * Hisaab ke lehaz se sirf DO simtein hain — balance barhta hai ya ghatta hai.
+ * Magar dukandar ke liye chaar alag baatein hain, aur history me un ka farq
+ * nazar aana chahiye:
+ *
+ *   udhaar  (+) maal udhaar diya
+ *   wapas   (+) grahak apna jama karaya hua paisa wapas le gaya
+ *   milay   (−) grahak ne khata chukaya
+ *   jama    (−) grahak apna paisa dukandar ke paas rakh gaya
+ *
+ * `jama` wali soorat asli hai aur aam bhi: mohalle ke log paisa dukandar ke
+ * paas rakh jate hain, phir thora thora le kar jate hain ya usi se apna khata
+ * saaf karwa lete hain. Aisi soorat me balance MANFI ho jata hai — jis ka
+ * matlab hai dukandar ne dena hai, lena nahi.
+ */
+/**
+ * Har qism kis hisaab ko chhuti hai, aur kis simt me.
+ *
+ * DO ALAG hisaab hain, ek nahi:
+ *
+ *   `balance` — udhaar. Grahak ne dukan ka kitna dena hai.
+ *   `deposit` — jama. Grahak ka apna paisa jo dukan me para hai.
+ *
+ * Inhein milana ghalat tha. Ek shakhs ne Rs 500 ka udhaar liya ho aur Rs 2000
+ * jama karaye hon, to "Rs 1500 dukandar ne dena hai" likhna dono baaton ko
+ * chhupa deta hai — na udhaar nazar aata hai na jama. Dukandar ko dono alag
+ * chahiyen, kyunki wo dono cheezein alag hain.
+ */
+export const KHATA_KINDS = {
+  udhaar: { field: 'balance', sign: 1, cash: 'out' },
+  milay: { field: 'balance', sign: -1, cash: 'in' },
+  jama: { field: 'deposit', sign: 1, cash: 'in' },
+  wapas: { field: 'deposit', sign: -1, cash: 'out' },
+}
+
+/**
+ * Rang kis baat ka hai — paisa dukan me aaya ya gaya.
+ *
+ * Ye `sign` se ALAG hai, aur farq ahem hai. Jama karana `deposit` ko BARHATA
+ * hai (sign +1) magar paisa dukan me AATA hai — laal dikhana ghalat hoga. Rang
+ * hamesha wohi batata hai jo dukandar ki jeb ke saath hua: sabz andar, laal
+ * bahar.
+ */
+export function khataCash(kind) {
+  return KHATA_KINDS[kind]?.cash ?? 'out'
+}
+
+/** Barhne wali simt (+1) ya ghatne wali (−1). */
+export function khataSign(kind) {
+  return KHATA_KINDS[kind]?.sign ?? 1
+}
+
+/** Ye qism kaun sa hisaab chhuti hai — 'balance' (udhaar) ya 'deposit' (jama). */
+export function khataField(kind) {
+  return KHATA_KINDS[kind]?.field ?? 'balance'
+}
+
+/** Purane records me sirf `type` tha ('diya'/'mila') — unhe bhi parhna hai. */
+export function khataKindOf(entry) {
+  if (entry?.kind) return entry.kind
+  return entry?.type === 'mila' ? 'milay' : 'udhaar'
+}
+
+export async function addKhataEntry({ partyId, kind, amount, items, collectedBy, note }) {
   const value = roundMoney(Math.abs(Number(amount) || 0))
   if (!value) throw new Error('Raqam zaroori hai')
 
@@ -981,7 +1070,9 @@ export async function addKhataEntry({ partyId, type, amount, items, collectedBy,
 
   const buildEntry = (balanceAfter, offline) => ({
     partyId,
-    type,
+    kind,
+    // Purana `type` bhi likhte hain — purane parhne wale us par chal sakte hain.
+    type: khataSign(kind) > 0 ? 'diya' : 'mila',
     amount: value,
     items: cleanItems,
     collectedBy: collectedBy?.trim() || null,
@@ -991,8 +1082,8 @@ export async function addKhataEntry({ partyId, type, amount, items, collectedBy,
     ...(offline ? { offline: true } : {}),
   })
 
-  const nextBalance = (current) =>
-    roundMoney(type === 'diya' ? current + value : current - value)
+  const target = khataField(kind)
+  const nextBalance = (current) => roundMoney(current + khataSign(kind) * value)
 
   if (navigator.onLine) {
     try {
@@ -1000,9 +1091,9 @@ export async function addKhataEntry({ partyId, type, amount, items, collectedBy,
         const snap = await tx.get(partyRef)
         if (!snap.exists()) throw new Error('Khata nahi mila')
 
-        const balanceAfter = nextBalance(Number(snap.data().balance || 0))
+        const balanceAfter = nextBalance(Number(snap.data()[target] || 0))
         tx.update(partyRef, {
-          balance: balanceAfter,
+          [target]: balanceAfter,
           lastEntryAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         })
@@ -1022,10 +1113,10 @@ export async function addKhataEntry({ partyId, type, amount, items, collectedBy,
   const local = khataPartyById(partyId)
   if (!local) throw new Error('Khata nahi mila')
 
-  const balanceAfter = nextBalance(Number(local.balance || 0))
+  const balanceAfter = nextBalance(Number(local[target] || 0))
   const batch = writeBatch(dbf)
   batch.update(partyRef, {
-    balance: balanceAfter,
+    [target]: balanceAfter,
     lastEntryAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
@@ -1033,6 +1124,124 @@ export async function addKhataEntry({ partyId, type, amount, items, collectedBy,
   batch.commit().catch(() => {})
 
   return balanceAfter
+}
+
+/**
+ * Poori history dobara jorr kar hisaab naye sire se likhna.
+ *
+ * Ye sab se nazuk kaam hai. Ek purani entry ki raqam badal dein to us ke BAAD
+ * wali har entry ka `balanceAfter` jhoot ho jata hai, aur party ka balance bhi.
+ * Is liye yahan sirf ek document nahi likha jata — poori zanjeer naye sire se
+ * banti hai.
+ *
+ * Mehnga lagta hai magar hai nahi: ek grahak ki entries sau do sau se aage
+ * shazi hi jati hain, aur ye sirf tabdeeli/mitane par chalta hai — nayi entry
+ * par nahi.
+ *
+ * Ginti hamesha SERVER se parhi jati hai, `state` se nahi: `state` khate ki
+ * entries rakhta hi nahi, aur adhoori list par hisaab dobara banana us se bhi
+ * bura hai jo theek karne chale the.
+ */
+async function recalcParty(partyId) {
+  const snap = await getDocs(query(col('khataEntries'), where('partyId', '==', partyId)))
+  const rows = snap.docs
+    .map(withId)
+    .sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt))
+
+  // Do alag zanjeerein: udhaar ki apni, jama ki apni. Har entry ka
+  // `balanceAfter` usi hisaab ka hai jise wo chhuti hai.
+  const running = { balance: 0, deposit: 0 }
+  const ops = []
+  for (const row of rows) {
+    const kind = khataKindOf(row)
+    const field = khataField(kind)
+    running[field] = roundMoney(running[field] + khataSign(kind) * Number(row.amount || 0))
+    if (row.balanceAfter !== running[field]) {
+      const balanceAfter = running[field]
+      ops.push((batch) => batch.update(doc(col('khataEntries'), row.id), { balanceAfter }))
+    }
+  }
+
+  const last = rows[rows.length - 1]
+  ops.push((batch) =>
+    batch.update(doc(col('khataParties'), partyId), {
+      balance: running.balance,
+      deposit: running.deposit,
+      lastEntryAt: last ? last.createdAt : null,
+      updatedAt: serverTimestamp(),
+    }),
+  )
+
+  await commitInChunks(ops)
+  return running
+}
+
+/**
+ * Entry me tabdeeli.
+ *
+ * Sirf wo cheezein badalti hain jo dukandar ne khud likhi thin — raqam, qism,
+ * saman, kaun aaya tha, note. Waqt aur balance app khud sambhalti hai.
+ */
+export async function updateKhataEntry(entryId, changes) {
+  const ref = doc(col('khataEntries'), entryId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Entry nahi mili')
+
+  const partyId = snap.data().partyId
+  const patch = { editedAt: serverTimestamp() }
+
+  if (changes.amount !== undefined) {
+    const value = roundMoney(Math.abs(Number(changes.amount) || 0))
+    if (!value) throw new Error('Raqam zaroori hai')
+    patch.amount = value
+  }
+  if (changes.kind !== undefined) {
+    patch.kind = changes.kind
+    patch.type = khataSign(changes.kind) > 0 ? 'diya' : 'mila'
+  }
+  if (changes.items !== undefined) {
+    patch.items = (changes.items || [])
+      .map((it) => ({
+        productId: it.productId || null,
+        text: (it.text || '').trim(),
+        qty: it.qty ? String(it.qty).trim() : null,
+      }))
+      .filter((it) => it.text || it.productId)
+  }
+  if (changes.collectedBy !== undefined) patch.collectedBy = changes.collectedBy?.trim() || null
+  if (changes.note !== undefined) patch.note = changes.note?.trim() || null
+
+  await updateDoc(ref, patch)
+  return recalcParty(partyId)
+}
+
+/** Entry mitana — us ke baad ka poora hisaab dobara ban jata hai. */
+export async function deleteKhataEntry(entryId) {
+  const ref = doc(col('khataEntries'), entryId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return 0
+
+  const partyId = snap.data().partyId
+  await deleteDoc(ref)
+  return recalcParty(partyId)
+}
+
+/**
+ * Kai khate ek saath mitana.
+ *
+ * Aise khate jama ho jate hain jo kabhi chale hi nahi, ya jin ka kaam khatam
+ * ho chuka. Ek ek kar ke mitana itna bora kaam hai ke koi karta hi nahi, aur
+ * list bhari rehti hai — asal baqaya us me gum ho jata hai.
+ */
+export async function deleteKhataParties(ids) {
+  const ops = []
+  for (const id of ids) {
+    const snap = await getDocs(query(col('khataEntries'), where('partyId', '==', id)))
+    for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
+    ops.push((batch) => batch.delete(doc(col('khataParties'), id)))
+  }
+  await commitInChunks(ops)
+  return ids.length
 }
 
 /**
