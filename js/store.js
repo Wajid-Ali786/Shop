@@ -12,7 +12,6 @@
 import {
   collection,
   doc,
-  addDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -377,12 +376,15 @@ export async function createCategory(data) {
   if (findCategoryByName(data)) throw duplicateError()
 
   const sortOrder = (state.categories.length + 1) * 10
-  const ref = await addDoc(col('categories'), {
-    nameEn: data.nameEn.trim(),
-    nameUr: data.nameUr?.trim() || null,
-    icon: data.icon ?? '📦',
-    sortOrder,
-  })
+  const ref = doc(col('categories'))
+  await writeSoon(
+    setDoc(ref, {
+      nameEn: data.nameEn.trim(),
+      nameUr: data.nameUr?.trim() || null,
+      icon: data.icon ?? '📦',
+      sortOrder,
+    }),
+  )
   await syncPublicCategories()
   // Product form ko id chahiye hoti hai taake nayi category foran lag jaye.
   return ref.id
@@ -496,7 +498,7 @@ async function applyCategoryMerge(remap) {
 export async function updateCategory(id, changes) {
   if ((changes.nameEn || changes.nameUr) && findCategoryByName(changes, id)) throw duplicateError()
 
-  await updateDoc(doc(col('categories'), id), changes)
+  await writeSoon(updateDoc(doc(col('categories'), id), changes))
   // Category ka naam products ke searchBlob ka hissa hai — lekin sirf usi
   // category ke products ka.
   await rebuildSearchBlobs(id)
@@ -550,18 +552,21 @@ export async function createProduct(input) {
     updatedAt: serverTimestamp(),
   }
 
-  const ref = await addDoc(col('products'), payload)
+  const ref = doc(col('products'))
+  await writeSoon(setDoc(ref, payload))
 
   // Opening stock bhi history me aana chahiye, warna hisaab poora nahi hota.
   if (stockQty !== 0) {
-    await addDoc(col('movements'), {
-      productId: ref.id,
-      type: 'in',
-      qty: Math.abs(stockQty),
-      reason: 'initial',
-      balanceAfter: stockQty,
-      createdAt: serverTimestamp(),
-    })
+    await writeSoon(
+      setDoc(doc(col('movements')), {
+        productId: ref.id,
+        type: 'in',
+        qty: Math.abs(stockQty),
+        reason: 'initial',
+        balanceAfter: stockQty,
+        createdAt: serverTimestamp(),
+      }),
+    )
   }
 
   // Grahak wali list bhi taza — catalog band ho to ye kuch nahi karta.
@@ -578,11 +583,13 @@ export async function updateProduct(id, changes) {
   if (!existing) throw new Error('Product nahi mila')
 
   const merged = { ...existing, ...changes }
-  await updateDoc(doc(col('products'), id), {
-    ...cleanUndefined(changes),
-    searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
-    updatedAt: serverTimestamp(),
-  })
+  await writeSoon(
+    updateDoc(doc(col('products'), id), {
+      ...cleanUndefined(changes),
+      searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
+      updatedAt: serverTimestamp(),
+    }),
+  )
 
   await syncPublicProduct({ ...merged, id })
 }
@@ -776,7 +783,8 @@ export function watchProductMovements(productId, callback, onError) {
 const imageCache = new Map()
 
 export async function saveImage(dataUrl) {
-  const ref = await addDoc(col('images'), { data: dataUrl, createdAt: serverTimestamp() })
+  const ref = doc(col('images'))
+  await writeSoon(setDoc(ref, { data: dataUrl, createdAt: serverTimestamp() }))
   imageCache.set(ref.id, dataUrl)
   return ref.id
 }
@@ -799,7 +807,7 @@ export async function deleteImage(imageId) {
   if (!imageId) return
   imageCache.delete(imageId)
   try {
-    await deleteDoc(doc(col('images'), imageId))
+    await writeSoon(deleteDoc(doc(col('images'), imageId)))
   } catch {
     // Tasveer pehle hi ja chuki ho to koi baat nahi.
   }
@@ -809,7 +817,7 @@ export async function deleteImage(imageId) {
 
 export async function saveSetting(key, value) {
   // merge:true isliye ke shop document pehli baar bhi ban jaye.
-  await setDoc(shopRef(), { [key]: value }, { merge: true })
+  await writeSoon(setDoc(shopRef(), { [key]: value }, { merge: true }))
 }
 
 // ------------------------------------------------------------------- seed
@@ -841,11 +849,11 @@ export async function seedDefaultCategories() {
   const existing = await getDocs(col('categories'))
   if (!existing.empty) return 0
 
-  const batch = writeBatch(dbf)
-  DEFAULT_CATEGORIES.forEach((cat, i) => {
-    batch.set(doc(col('categories')), { ...cat, sortOrder: (i + 1) * 10 })
-  })
-  await batch.commit()
+  await commitSoon(
+    DEFAULT_CATEGORIES.map((cat, i) => (batch) =>
+      batch.set(doc(col('categories')), { ...cat, sortOrder: (i + 1) * 10 }),
+    ),
+  )
   return DEFAULT_CATEGORIES.length
 }
 
@@ -915,27 +923,30 @@ export function khataTotals() {
 }
 
 export async function createKhataParty(data) {
-  const ref = await addDoc(col('khataParties'), {
-    name: (data.name || '').trim(),
-    phone: data.phone?.trim() || null,
-    note: data.note?.trim() || null,
-    categoryIds: data.categoryIds || [],
-    // Naya khata hamesha sifar se shuru hota hai — raqam sirf entry se aati hai.
-    balance: 0,
-    deposit: 0,
-    /*
-     * Jama karane ka option har khate par nahi.
-     *
-     * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool button
-     * lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar khud
-     * chalu karta hai — us khaas grahak ke liye.
-     */
-    hasDeposit: Boolean(data.hasDeposit),
-    status: 'active',
-    lastEntryAt: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  const ref = doc(col('khataParties'))
+  await writeSoon(
+    setDoc(ref, {
+      name: (data.name || '').trim(),
+      phone: data.phone?.trim() || null,
+      note: data.note?.trim() || null,
+      categoryIds: data.categoryIds || [],
+      // Naya khata hamesha sifar se shuru — raqam sirf entry se aati hai.
+      balance: 0,
+      deposit: 0,
+      /*
+       * Jama karane ka option har khate par nahi.
+       *
+       * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool
+       * button lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar
+       * khud chalu karta hai — us khaas grahak ke liye.
+       */
+      hasDeposit: Boolean(data.hasDeposit),
+      status: 'active',
+      lastEntryAt: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  )
   return ref.id
 }
 
@@ -959,18 +970,21 @@ export async function deleteKhataParty(id) {
 // ---- khata categories (products wali se bilkul alag) ----
 
 export async function createKhataCategory(data) {
-  const ref = await addDoc(col('khataCategories'), {
-    nameEn: (data.nameEn || '').trim(),
-    nameUr: data.nameUr?.trim() || null,
-    icon: data.icon || '📓',
-    sortOrder: data.sortOrder ?? (state.khataCategories.length + 1) * 10,
-    createdAt: serverTimestamp(),
-  })
+  const ref = doc(col('khataCategories'))
+  await writeSoon(
+    setDoc(ref, {
+      nameEn: (data.nameEn || '').trim(),
+      nameUr: data.nameUr?.trim() || null,
+      icon: data.icon || '📓',
+      sortOrder: data.sortOrder ?? (state.khataCategories.length + 1) * 10,
+      createdAt: serverTimestamp(),
+    }),
+  )
   return ref.id
 }
 
 export async function updateKhataCategory(id, changes) {
-  await updateDoc(doc(col('khataCategories'), id), changes)
+  await writeSoon(updateDoc(doc(col('khataCategories'), id), changes))
 }
 
 /** Category mitne par khate nahi mitte — sirf un par se ye nishan hat jata hai. */
@@ -995,11 +1009,11 @@ export async function seedKhataCategories() {
   const existing = await getDocs(col('khataCategories'))
   if (!existing.empty) return 0
 
-  const batch = writeBatch(dbf)
-  DEFAULT_KHATA_CATEGORIES.forEach((cat, i) => {
-    batch.set(doc(col('khataCategories')), { ...cat, sortOrder: (i + 1) * 10 })
-  })
-  await batch.commit()
+  await commitSoon(
+    DEFAULT_KHATA_CATEGORIES.map((cat, i) => (batch) =>
+      batch.set(doc(col('khataCategories')), { ...cat, sortOrder: (i + 1) * 10 }),
+    ),
+  )
   return DEFAULT_KHATA_CATEGORIES.length
 }
 
