@@ -88,6 +88,17 @@ async function reauthenticate(currentPassword) {
   return user
 }
 
+/**
+ * Sirf tasdeeq: "kya ye wahi shakhs hai?"
+ *
+ * "Ye mera apna phone hai" chalu karte waqt istemaal hota hai. Password poochna
+ * yahan do kaam karta hai: mehfooz karne ke liye asal password mil jata hai,
+ * aur kaunter par khari koi ajnabi ye switch chalu nahi kar sakti.
+ */
+export async function verifyPassword(currentPassword) {
+  await reauthenticate(currentPassword)
+}
+
 export async function changePassword(currentPassword, newPassword) {
   const user = await reauthenticate(currentPassword)
   await updatePassword(user, newPassword)

@@ -362,6 +362,14 @@ export const en = {
     'In Safari, tap the Share button at the bottom, then choose "Add to Home Screen".',
   'settings.installManual':
     'Open your browser menu (⋮) and choose "Install app" or "Add to Home screen".',
+  'settings.trusted': 'This is my own phone',
+  'settings.trustedDesc':
+    'Fill in your email and password for you next time you sign in, so you do not have to type them again.',
+  'settings.trustedAsk':
+    'Enter your password once so we can fill it in for you next time.',
+  'settings.trustedWarn':
+    'Only turn this on for a phone you keep yourself. Your password is stored on this phone, so anyone who can open it can get into your shop.',
+  'settings.trustedCleared': 'Saved login deleted from this phone',
   'settings.about': 'About',
   'settings.aboutCloud':
     'Your data is saved in your own Firebase project, so you can open this shop from any phone with your login. The app also works without internet and syncs when the connection comes back.',

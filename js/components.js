@@ -101,10 +101,13 @@ export function field(label, control, { hint = '', error = '', required = false 
  * liye aankh ka button Urdu me bhi dahini taraf hi rehna chahiye — warna wo
  * unhi nishanat par aa jata jo abhi type ho rahe hain.
  */
-export function passwordInput(id, { autocomplete = 'current-password', required = false } = {}) {
+export function passwordInput(
+  id,
+  { autocomplete = 'current-password', required = false, value = '' } = {},
+) {
   return `
     <span class="pwwrap" dir="ltr">
-      <input id="${escAttr(id)}" type="password" dir="ltr"
+      <input id="${escAttr(id)}" type="password" dir="ltr" value="${escAttr(value)}"
         autocomplete="${escAttr(autocomplete)}"${required ? ' required' : ''}>
       <button type="button" class="pwtoggle" data-pwtoggle="${escAttr(id)}"
         aria-controls="${escAttr(id)}" aria-pressed="false"
