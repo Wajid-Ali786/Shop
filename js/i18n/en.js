@@ -197,6 +197,13 @@ export const en = {
   'khata.whatsapp': 'Remind on WhatsApp',
   'khata.whatsappText': 'Assalam o alaikum. {shop} ka hisaab: {amount} baqi hai. Shukriya.',
 
+  'khataCat.title': 'Khata categories',
+  'khataCat.partyCount': '{count} khatay',
+  'khataCat.empty': 'No khata categories',
+  'khataCat.emptyHint': 'Add one to sort your khatay — small, big, temporary, anything.',
+  'khataCat.deleteConfirm':
+    'Delete "{name}"? The {count} khatay in it are NOT deleted — they just lose this label.',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',

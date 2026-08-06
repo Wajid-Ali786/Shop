@@ -35,6 +35,7 @@ import { renderKhata } from './screens/khata.js'
 import { renderKhataParty } from './screens/khata-party.js'
 import { renderKhataForm, clearKhataDraft } from './screens/khata-form.js'
 import { renderCategories } from './screens/categories.js'
+import { renderKhataCategories } from './screens/khata-categories.js'
 import { renderSettings } from './screens/settings.js'
 
 const root = $('#app')
@@ -267,6 +268,7 @@ function routeTo(path, screen) {
   if (path === '/khata/new') return renderKhataForm(screen, null, render)
   if (path === '/settings') return renderSettings(screen, render)
   if (path === '/categories') return renderCategories(screen)
+  if (path === '/khata-categories') return renderKhataCategories(screen)
   if (path === '/product/new') return renderProductForm(screen, null, render)
 
   const khataEdit = matchRoute(path, '/khata/:id/edit')

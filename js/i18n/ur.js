@@ -197,6 +197,13 @@ export const ur = {
   'khata.whatsapp': 'واٹس ایپ پر یاد دہانی',
   'khata.whatsappText': 'السلام علیکم۔ {shop} کا حساب: {amount} باقی ہے۔ شکریہ۔',
 
+  'khataCat.title': 'کھاتہ کیٹیگریز',
+  'khataCat.partyCount': '{count} کھاتے',
+  'khataCat.empty': 'کوئی کھاتہ کیٹیگری نہیں',
+  'khataCat.emptyHint': 'کھاتوں کو الگ کرنے کے لیے بنائیں — چھوٹا، بڑا، عارضی، جو بھی۔',
+  'khataCat.deleteConfirm':
+    '"{name}" ڈیلیٹ کریں؟ اس کے {count} کھاتے ڈیلیٹ نہیں ہوں گے — صرف یہ نشان ہٹ جائے گا۔',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',

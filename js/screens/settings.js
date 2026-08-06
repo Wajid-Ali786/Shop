@@ -75,8 +75,12 @@ export function renderSettings(root, rerender) {
 
         ${section(
           t('nav.settings'),
-          `<button class="list-row" data-go="/categories">
+          `<button class="list-row" data-go="/categories" style="margin-bottom:8px">
              <span class="bold" style="flex:1">${esc(t('categories.title'))}</span>
+             ${icon('chevron', 'flip')}
+           </button>
+           <button class="list-row" data-go="/khata-categories">
+             <span class="bold" style="flex:1">${esc(t('khataCat.title'))}</span>
              ${icon('chevron', 'flip')}
            </button>`,
         )}
