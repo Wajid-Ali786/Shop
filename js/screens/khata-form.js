@@ -49,8 +49,9 @@ export function renderKhataForm(root, partyId, rerender) {
             phone: existing.phone || '',
             note: existing.note || '',
             categoryIds: [...(existing.categoryIds || [])],
+            hasDeposit: Boolean(existing.hasDeposit),
           }
-        : { name: '', phone: '', note: '', categoryIds: [] },
+        : { name: '', phone: '', note: '', categoryIds: [], hasDeposit: false },
       saving: false,
     }
   }
@@ -116,6 +117,30 @@ export function renderKhataForm(root, partyId, rerender) {
             </button>
           </div>
 
+          <!--
+            Jama ka option har khate par nahi.
+
+            Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool
+            button lagana rozana ka kaam bhaari kar deta hai — is liye dukandar
+            khud, us khaas grahak ke liye chalu karta hai.
+          -->
+          <div class="card" style="margin-bottom:16px">
+            <div class="row row--between">
+              <span style="flex:1">
+                <span class="bold" style="display:block">${esc(t('khata.hasDeposit'))}</span>
+                <span class="tiny muted">${esc(t('khata.hasDepositHint'))}</span>
+              </span>
+              <div class="choices choices--2" style="width:auto;flex-shrink:0">
+                <button class="choice${form.hasDeposit ? ' choice--active' : ''}" data-dep="on">
+                  ${esc(t('settings.catalogOn'))}
+                </button>
+                <button class="choice${form.hasDeposit ? '' : ' choice--active'}" data-dep="off">
+                  ${esc(t('settings.catalogOff'))}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="card">
             ${field(
               t('khata.note'),
@@ -154,6 +179,12 @@ export function renderKhataForm(root, partyId, rerender) {
   draw()
 
   on(root, 'click', '[data-back]', () => goBack())
+
+  on(root, 'click', '[data-dep]', (_e, el) => {
+    form.hasDeposit = el.dataset.dep === 'on'
+    readInputs()
+    draw()
+  })
 
   on(root, 'click', '[data-kcat]', (_e, el) => {
     const id = el.dataset.kcat

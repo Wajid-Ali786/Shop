@@ -11,6 +11,8 @@ import {
   deleteKhataEntry,
   khataSign,
   khataKindOf,
+  khataField,
+  khataCash,
   productById,
 } from '../store.js'
 import { appBar, field, icon, empty, loading } from '../components.js'
@@ -68,6 +70,7 @@ export function renderKhataParty(root, partyId, rerender) {
     if (!root.isConnected) return
 
     const balance = Number(party.balance || 0)
+    const deposit = Number(party.deposit || 0)
     const currency = state.settings.currency
     const cats = (party.categoryIds || [])
       .map((id) => khataCategoryById(id))
@@ -82,35 +85,59 @@ export function renderKhataParty(root, partyId, rerender) {
         })}
 
         <div class="pad">
-          <div class="card khatatotal" style="margin-bottom:16px">
-            <p class="tiny muted">${esc(
-              balance > 0 ? t('khata.owesYou') : balance < 0 ? t('khata.youOwe') : t('khata.clear'),
-            )}</p>
-            <p class="khatatotal__value${
-              balance > 0
-                ? ' khatatotal__value--owed'
-                : balance < 0
-                  ? ' khatatotal__value--advance'
-                  : ''
-            }" dir="ltr">${esc(formatMoney(Math.abs(balance), currency))}</p>
+          <!--
+            Do alag card, ek nahi. Udhaar aur jama do alag baatein hain — inhein
+            ek hi adad me milane se dono chhup jate hain.
+          -->
+          <div class="${party.hasDeposit ? 'balcards' : ''}" style="margin-bottom:14px">
+            <div class="card khatatotal">
+              <p class="tiny muted">${esc(balance < 0 ? t('khata.youOwe') : t('khata.owesYou'))}</p>
+              <p class="khatatotal__value${
+                balance > 0
+                  ? ' khatatotal__value--owed'
+                  : balance < 0
+                    ? ' khatatotal__value--advance'
+                    : ''
+              }" dir="ltr">${esc(formatMoney(Math.abs(balance), currency))}</p>
+            </div>
             ${
-              cats.length
-                ? `<p class="small muted">${cats
-                    .map((c) => `${esc(c.icon || '📓')} ${esc(localizedName(c))}`)
-                    .join(' · ')}</p>`
+              party.hasDeposit
+                ? `<div class="card khatatotal">
+                     <p class="tiny muted">${esc(t('khata.depositHeld'))}</p>
+                     <p class="khatatotal__value khatatotal__value--advance" dir="ltr">${esc(
+                       formatMoney(Math.abs(deposit), currency),
+                     )}</p>
+                   </div>`
                 : ''
             }
-            ${party.phone ? `<p class="small muted" dir="ltr">${esc(party.phone)}</p>` : ''}
-            ${party.note ? `<p class="small muted" dir="auto">${esc(party.note)}</p>` : ''}
           </div>
 
+          ${
+            cats.length || party.phone || party.note
+              ? `<div class="card" style="margin-bottom:14px;text-align:center">
+                   ${
+                     cats.length
+                       ? `<p class="small muted">${cats
+                           .map((c) => `${esc(c.icon || '📓')} ${esc(localizedName(c))}`)
+                           .join(' · ')}</p>`
+                       : ''
+                   }
+                   ${party.phone ? `<p class="small muted" dir="ltr">${esc(party.phone)}</p>` : ''}
+                   ${party.note ? `<p class="small muted" dir="auto">${esc(party.note)}</p>` : ''}
+                 </div>`
+              : ''
+          }
+
+          <!-- Jama wale do button sirf us khate par jis par ye chalu ho. -->
           <div class="kindgrid">
-            ${KINDS.map(
-              (k) => `
+            ${KINDS.filter((k) => party.hasDeposit || khataField(k.kind) === 'balance')
+              .map(
+                (k) => `
               <button class="kindbtn ${k.cls}" data-entry="${escAttr(k.kind)}">
                 ${esc(t(k.key))}
               </button>`,
-            ).join('')}
+              )
+              .join('')}
           </div>
 
           ${party.phone ? whatsappButton(party, balance, currency) : ''}
@@ -195,7 +222,8 @@ function historyHtml(currency) {
 }
 
 function entryRow(entry, currency) {
-  const up = khataSign(khataKindOf(entry)) > 0
+  // Rang paisa ki simt batata hai, hisaab ki nahi — dekhein store ka `khataCash`.
+  const up = khataCash(khataKindOf(entry)) === 'out'
   const title = itemsLine(entry) || kindLabel(khataKindOf(entry))
 
   return `
@@ -236,7 +264,7 @@ function itemsLine(entry) {
  */
 function openEntryDetail(entry) {
   const currency = state.settings.currency
-  const up = khataSign(khataKindOf(entry)) > 0
+  const up = khataCash(khataKindOf(entry)) === 'out'
   const items = itemsLine(entry)
 
   const wrap = openSheet(t('khata.entryDetail'), `
@@ -252,7 +280,12 @@ function openEntryDetail(entry) {
       ${items ? defRow(t('khata.items'), items) : ''}
       ${entry.collectedBy ? defRow(t('khata.collectedBy'), entry.collectedBy) : ''}
       ${entry.note ? defRow(t('khata.note'), entry.note) : ''}
-      ${defRow(t('khata.balanceAfter'), balanceLabel(entry.balanceAfter ?? 0, currency))}
+      ${defRow(
+        khataField(khataKindOf(entry)) === 'deposit'
+          ? t('khata.depositAfter')
+          : t('khata.balanceAfter'),
+        balanceLabel(entry.balanceAfter ?? 0, currency, khataField(khataKindOf(entry))),
+      )}
       ${entry.editedAt ? defRow(t('khata.edited'), formatDateTime(entry.editedAt), 'ltr') : ''}
     </dl>
 
@@ -293,8 +326,11 @@ function openEntryDetail(entry) {
  * nahi batata. Manfi ka matlab yahan bilkul saaf hai: dukandar ne dena hai.
  * Wohi likh dete hain, nishan ke bajaye.
  */
-function balanceLabel(value, currency) {
+function balanceLabel(value, currency, field = 'balance') {
   const amount = formatMoney(Math.abs(value), currency)
+  // Jama ka hisaab hamesha "dukan me para hua" hota hai — us par lena/dena ka
+  // sawal hi nahi uthta.
+  if (field === 'deposit') return amount
   if (value > 0) return `${amount} · ${t('khata.owesYou')}`
   if (value < 0) return `${amount} · ${t('khata.youOwe')}`
   return t('khata.clear')
@@ -325,6 +361,8 @@ function defRow(label, value, dir = 'auto') {
  *   hota hai ke "maine to liya hi nahi".
  */
 function openEntrySheet(partyId, kind, existing = null) {
+  // Jama wale buttons sirf us khate par jis par dukandar ne ye chalu kiya ho.
+  const allowDeposit = Boolean(khataPartyById(partyId)?.hasDeposit)
   const isEdit = Boolean(existing)
   const items = existing ? (existing.items || []).map((it) => ({ ...it })) : []
   let productQuery = ''
@@ -332,12 +370,14 @@ function openEntrySheet(partyId, kind, existing = null) {
 
   const wrap = openSheet(isEdit ? t('khata.editEntry') : kindLabel(kind), `
     <div class="kindpick">
-      ${KINDS.map(
-        (k) => `
+      ${KINDS.filter((k) => allowDeposit || khataField(k.kind) === 'balance')
+        .map(
+          (k) => `
         <button type="button"
           class="kindpick__btn${k.kind === selectedKind ? ' kindpick__btn--on' : ''}"
           data-kind="${escAttr(k.kind)}">${esc(t(k.key))}</button>`,
-      ).join('')}
+        )
+        .join('')}
     </div>
 
     ${field(

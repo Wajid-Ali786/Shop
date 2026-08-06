@@ -226,6 +226,11 @@ export const en = {
   'app.updateReady': 'A new version is ready',
   'app.updateReload': 'Reload',
 
+  'khata.depositHeld': 'Their money with you',
+  'khata.depositAfter': 'Deposit after',
+  'khata.hasDeposit': 'Keeps money with me',
+  'khata.hasDepositHint': 'Turn on for people who leave cash with you and draw it down',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',

@@ -64,11 +64,11 @@ export function renderKhata(root, rerender) {
           )}</p>
           <p class="small muted">${esc(t('khata.fromPeople', { count: totals.people }))}</p>
           ${
-            totals.owed > 0
+            totals.deposit > 0
               ? `<p class="khatatotal__split">
                    ${esc(t('khata.totalIn'))}
                    <span class="tx__amount--in bold" dir="ltr">${esc(
-                     formatMoney(totals.owed, state.settings.currency),
+                     formatMoney(totals.deposit, state.settings.currency),
                    )}</span>
                  </p>`
               : ''

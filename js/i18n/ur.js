@@ -226,6 +226,11 @@ export const ur = {
   'app.updateReady': 'ایپ کا نیا ورژن تیار ہے',
   'app.updateReload': 'دوبارہ لوڈ کریں',
 
+  'khata.depositHeld': 'اُن کا پیسہ آپ کے پاس',
+  'khata.depositAfter': 'اس کے بعد جمع',
+  'khata.hasDeposit': 'میرے پاس پیسہ رکھتا ہے',
+  'khata.hasDepositHint': 'اُن لوگوں کے لیے چالو کریں جو پیسہ رکھ کر تھوڑا تھوڑا لیتے ہیں',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',

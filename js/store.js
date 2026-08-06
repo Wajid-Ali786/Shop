@@ -1019,10 +1019,22 @@ export async function seedKhataCategories() {
  * chahiyen, kyunki wo dono cheezein alag hain.
  */
 export const KHATA_KINDS = {
-  udhaar: { field: 'balance', sign: 1 },
-  milay: { field: 'balance', sign: -1 },
-  jama: { field: 'deposit', sign: 1 },
-  wapas: { field: 'deposit', sign: -1 },
+  udhaar: { field: 'balance', sign: 1, cash: 'out' },
+  milay: { field: 'balance', sign: -1, cash: 'in' },
+  jama: { field: 'deposit', sign: 1, cash: 'in' },
+  wapas: { field: 'deposit', sign: -1, cash: 'out' },
+}
+
+/**
+ * Rang kis baat ka hai — paisa dukan me aaya ya gaya.
+ *
+ * Ye `sign` se ALAG hai, aur farq ahem hai. Jama karana `deposit` ko BARHATA
+ * hai (sign +1) magar paisa dukan me AATA hai — laal dikhana ghalat hoga. Rang
+ * hamesha wohi batata hai jo dukandar ki jeb ke saath hua: sabz andar, laal
+ * bahar.
+ */
+export function khataCash(kind) {
+  return KHATA_KINDS[kind]?.cash ?? 'out'
 }
 
 /** Barhne wali simt (+1) ya ghatne wali (−1). */

@@ -2252,6 +2252,7 @@ input[type='checkbox'] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  margin-bottom: 12px;
 }
 .kindbtn {
   /* Chaaron ek jaise oonche — ek label lipat jaye to grid tirha nazar aata hai. */
@@ -2387,4 +2388,14 @@ input[type='checkbox'] {
   font-size: 1rem;
   cursor: pointer;
   opacity: 0.7;
+}
+
+/* Do balance saath saath — udhaar aur jama, alag alag. */
+.balcards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.balcards .khatatotal__value {
+  font-size: 1.35rem;
 }
