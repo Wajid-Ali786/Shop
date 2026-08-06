@@ -210,7 +210,7 @@ export const en = {
   'khata.kindUdhaar': 'Gave on credit',
   'khata.kindMilay': 'Money received',
   'khata.kindJama': 'Deposited with me',
-  'khata.kindWapas': 'Took their money back',
+  'khata.kindWapas': 'Took money back',
   'khata.select': 'Select',
   'khata.selected': '{count} selected',
   'khata.deleteManyConfirm':

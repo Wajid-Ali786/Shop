@@ -2254,7 +2254,12 @@ input[type='checkbox'] {
   gap: 8px;
 }
 .kindbtn {
-  min-height: 48px;
+  /* Chaaron ek jaise oonche — ek label lipat jaye to grid tirha nazar aata hai. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 52px;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);

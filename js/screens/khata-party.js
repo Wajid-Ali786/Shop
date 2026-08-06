@@ -252,7 +252,7 @@ function openEntryDetail(entry) {
       ${items ? defRow(t('khata.items'), items) : ''}
       ${entry.collectedBy ? defRow(t('khata.collectedBy'), entry.collectedBy) : ''}
       ${entry.note ? defRow(t('khata.note'), entry.note) : ''}
-      ${defRow(t('khata.balanceAfter'), formatMoney(entry.balanceAfter ?? 0, currency), 'ltr')}
+      ${defRow(t('khata.balanceAfter'), balanceLabel(entry.balanceAfter ?? 0, currency))}
       ${entry.editedAt ? defRow(t('khata.edited'), formatDateTime(entry.editedAt), 'ltr') : ''}
     </dl>
 
@@ -284,6 +284,20 @@ function openEntryDetail(entry) {
       toast(t('error.generic'))
     }
   })
+}
+
+/**
+ * Balance ko lafzon me batana.
+ *
+ * `formatMoney(-550)` "Rs -550" deta hai — ek manfi nishan jo dukandar ko kuch
+ * nahi batata. Manfi ka matlab yahan bilkul saaf hai: dukandar ne dena hai.
+ * Wohi likh dete hain, nishan ke bajaye.
+ */
+function balanceLabel(value, currency) {
+  const amount = formatMoney(Math.abs(value), currency)
+  if (value > 0) return `${amount} · ${t('khata.owesYou')}`
+  if (value < 0) return `${amount} · ${t('khata.youOwe')}`
+  return t('khata.clear')
 }
 
 function defRow(label, value, dir = 'auto') {

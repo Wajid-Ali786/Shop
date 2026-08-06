@@ -210,7 +210,7 @@ export const ur = {
   'khata.kindUdhaar': 'ادھار دیا',
   'khata.kindMilay': 'پیسے ملے',
   'khata.kindJama': 'میرے پاس جمع کرایا',
-  'khata.kindWapas': 'اپنا پیسہ واپس لیا',
+  'khata.kindWapas': 'پیسہ واپس لیا',
   'khata.select': 'منتخب کریں',
   'khata.selected': '{count} منتخب',
   'khata.deleteManyConfirm':
