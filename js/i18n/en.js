@@ -204,6 +204,28 @@ export const en = {
   'khataCat.deleteConfirm':
     'Delete "{name}"? The {count} khatay in it are NOT deleted — they just lose this label.',
 
+  'khata.totalIn': 'People have deposited with you',
+  'khata.youOwe': 'You owe them',
+  'khata.clear': 'All clear',
+  'khata.kindUdhaar': 'Gave on credit',
+  'khata.kindMilay': 'Money received',
+  'khata.kindJama': 'Deposited with me',
+  'khata.kindWapas': 'Took their money back',
+  'khata.select': 'Select',
+  'khata.selected': '{count} selected',
+  'khata.deleteManyConfirm':
+    'Delete {count} khatay and all their history? This cannot be undone.',
+  'khata.entryDetail': 'Transaction',
+  'khata.entryWhen': 'When',
+  'khata.balanceAfter': 'Balance after',
+  'khata.edited': 'Edited',
+  'khata.editEntry': 'Edit transaction',
+  'khata.deleteEntry': 'Delete transaction',
+  'khata.deleteEntryConfirm':
+    'Delete this transaction? The balance will be worked out again without it.',
+  'app.updateReady': 'A new version is ready',
+  'app.updateReload': 'Reload',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',

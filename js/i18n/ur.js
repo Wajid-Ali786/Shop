@@ -204,6 +204,28 @@ export const ur = {
   'khataCat.deleteConfirm':
     '"{name}" ڈیلیٹ کریں؟ اس کے {count} کھاتے ڈیلیٹ نہیں ہوں گے — صرف یہ نشان ہٹ جائے گا۔',
 
+  'khata.totalIn': 'لوگوں کا آپ کے پاس جمع',
+  'khata.youOwe': 'آپ نے دینا ہے',
+  'khata.clear': 'حساب برابر',
+  'khata.kindUdhaar': 'ادھار دیا',
+  'khata.kindMilay': 'پیسے ملے',
+  'khata.kindJama': 'میرے پاس جمع کرایا',
+  'khata.kindWapas': 'اپنا پیسہ واپس لیا',
+  'khata.select': 'منتخب کریں',
+  'khata.selected': '{count} منتخب',
+  'khata.deleteManyConfirm':
+    '{count} کھاتے اور اُن کی پوری ہسٹری ڈیلیٹ کر دیں؟ یہ واپس نہیں آئے گی۔',
+  'khata.entryDetail': 'ٹرانزیکشن',
+  'khata.entryWhen': 'کب',
+  'khata.balanceAfter': 'اس کے بعد بیلنس',
+  'khata.edited': 'تبدیل ہوئی',
+  'khata.editEntry': 'ٹرانزیکشن میں تبدیلی',
+  'khata.deleteEntry': 'ٹرانزیکشن ڈیلیٹ کریں',
+  'khata.deleteEntryConfirm':
+    'یہ ٹرانزیکشن ڈیلیٹ کریں؟ بیلنس اس کے بغیر دوبارہ بن جائے گا۔',
+  'app.updateReady': 'ایپ کا نیا ورژن تیار ہے',
+  'app.updateReload': 'دوبارہ لوڈ کریں',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',
