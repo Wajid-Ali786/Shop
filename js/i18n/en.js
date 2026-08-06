@@ -233,6 +233,20 @@ export const en = {
 
   'khata.jamaShort': 'deposit',
 
+  'settings.historyKeep': 'Keep stock history for',
+  'settings.historyKeepDays': '{days} days',
+  'settings.historyKeepAll': 'Keep everything',
+  'settings.historyKeepHint':
+    'Older entries can be deleted to keep the app light. Your stock counts never change — only the record of what happened.',
+  'settings.historyClean': 'Delete old history',
+  'settings.historyNone': 'Nothing to clean up yet.',
+  'settings.historyConfirm':
+    'Delete {count} old stock entries? Your stock counts are NOT affected — only the history of what happened.',
+  'settings.historyDone': '{count} old entries deleted',
+  'home.historyTitle': 'Stock history is piling up',
+  'home.historyBody': 'Old entries can go. Your stock counts stay exactly as they are.',
+  'home.historyLater': 'Not now',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',

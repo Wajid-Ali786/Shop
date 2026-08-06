@@ -12,6 +12,10 @@ import {
   unpublishCatalog,
   backupReminderDays,
   BACKUP_REMINDER_CHOICES,
+  historyKeepDays,
+  HISTORY_KEEP_CHOICES,
+  countOldMovements,
+  pruneOldMovements,
 } from '../store.js'
 import { appBar, field, options, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
@@ -97,6 +101,23 @@ export function renderSettings(root, rerender) {
              </button>
              <input type="file" accept="application/json,.json" id="restore-file" hidden>
              <p class="small muted" style="margin-top:12px">${esc(t('settings.restoreDesc'))}</p>
+
+             <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+               ${field(
+                 t('settings.historyKeep'),
+                 `<select id="s-historyDays">${options(
+                   HISTORY_KEEP_CHOICES.map((d) => ({
+                     value: String(d),
+                     label: d === 0 ? t('settings.historyKeepAll') : t('settings.historyKeepDays', { days: d }),
+                   })),
+                   String(historyKeepDays(settings)),
+                 )}</select>`,
+                 { hint: t('settings.historyKeepHint') },
+               )}
+               <button class="btn btn--secondary btn--full btn--sm" data-prune>
+                 🧹 ${esc(t('settings.historyClean'))}
+               </button>
+             </div>
 
              <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
                ${field(
@@ -222,10 +243,39 @@ export function renderSettings(root, rerender) {
   bindSetting(root, '#s-currency', 'currency', (v) => v.trim() || 'Rs')
   bindSetting(root, '#s-lowStock', 'defaultLowStockAt', (v) => Number(v) || 0)
   bindSetting(root, '#s-backupDays', 'backupReminderDays', (v) => Number(v) || 0)
+  bindSetting(root, '#s-historyDays', 'historyKeepDays', (v) => Number(v) || 0)
 
   // ---- export ----
   on(root, 'click', '[data-export]', async (_e, el) => {
     await runBackup(el)
+  })
+
+  // ---- purani stock history saaf karna ----
+  on(root, 'click', '[data-prune]', async (_e, el) => {
+    el.disabled = true
+    try {
+      const count = await countOldMovements()
+      if (!count) {
+        await alertModal({ title: t('settings.historyClean'), message: t('settings.historyNone') })
+        return
+      }
+      const ok = await confirmModal({
+        title: t('settings.historyClean'),
+        // Saaf saaf batana zaroori hai ke stock ki ginti par asar NAHI hota,
+        // warna dukandar darr ke maare kabhi ye button dabaye hi na.
+        message: t('settings.historyConfirm', { count }),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
+      if (!ok) return
+      const gone = await pruneOldMovements()
+      toast(t('settings.historyDone', { count: gone }))
+    } catch {
+      toast(t('error.generic'))
+    } finally {
+      el.disabled = false
+      rerender()
+    }
   })
 
   // ---- restore ----

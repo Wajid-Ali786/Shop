@@ -57,6 +57,10 @@ export function defaultSettings() {
     lastBackupAt: null,
     // Yaad-dihani kitne din baad. 0 = band.
     backupReminderDays: 14,
+    // Stock history kitne din rakhni hai. 0 = hamesha.
+    historyKeepDays: 180,
+    // Aakhri dafa kab saaf ki (ya yaad dilai) — millis.
+    lastHistoryCleanupAt: null,
     // Grahak wala catalog (bina login ke dikhne wali list) chalu hai ya nahi.
     publicCatalog: false,
   }
@@ -1321,6 +1325,86 @@ export function watchKhataEntries(partyId, callback) {
     },
     () => callback([]),
   )
+}
+
+/**
+ * Stock history ki safai.
+ *
+ * Har chhoti tabdeeli hamesha ke liye jama hoti rehti hai: rozana 50 entries
+ * ka matlab saal me 18,000 aur do saal me 36,000. Aaj masla nahi, aage hai —
+ * aur wo sab har login par mangwai bhi jati hain.
+ *
+ * Purani entries mitane se stock ka maujooda hisaab BILKUL nahi badalta:
+ * `stockQty` product par likha hota hai, history se ginti nahi hoti. Sirf
+ * "kab kya hua" ka purana record jata hai.
+ */
+export const HISTORY_KEEP_CHOICES = [90, 180, 365, 0]
+
+/** Kitne din baad yaad dilana hai. */
+const HISTORY_REMIND_DAYS = 10
+
+export function historyKeepDays(settings = state.settings) {
+  const days = Number(settings?.historyKeepDays)
+  return Number.isFinite(days) && days >= 0 ? days : 180
+}
+
+function historyCutoff(settings = state.settings) {
+  const days = historyKeepDays(settings)
+  if (!days) return null
+  return Date.now() - days * 24 * 60 * 60 * 1000
+}
+
+/**
+ * Safai ki yaad dilani chahiye?
+ *
+ * Server se ginti mangwana yahan fazool hoga — har dashboard par ek query.
+ * `state.movements` waise bhi aakhri 100 rakhti hai; agar un me se sab se
+ * purani bhi hadd se bahar hai to us se aage yaqeenan aur bhi hai. Ye jawab
+ * muft me mil jata hai.
+ */
+export function historyCleanupDue() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return false
+
+  const rows = state.movements
+  // Sau se kam hain to itni purani cheez ho hi nahi sakti jo pareshan kare.
+  if (rows.length < 100) return false
+
+  const oldest = rows[rows.length - 1]
+  if (!oldest?.createdAt || oldest.createdAt >= cutoff) return false
+
+  const last = state.settings.lastHistoryCleanupAt
+  if (!last) return true
+  return Date.now() - last > HISTORY_REMIND_DAYS * 24 * 60 * 60 * 1000
+}
+
+/** Kitni entries hadd se bahar hain — mitane se pehle dikhane ke liye. */
+export async function countOldMovements() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return 0
+  const snap = await getDocs(
+    query(col('movements'), where('createdAt', '<', Timestamp.fromMillis(cutoff))),
+  )
+  return snap.size
+}
+
+/** Purani entries mitao. Stock ki maujooda ginti par koi asar nahi hota. */
+export async function pruneOldMovements() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return 0
+
+  const snap = await getDocs(
+    query(col('movements'), where('createdAt', '<', Timestamp.fromMillis(cutoff))),
+  )
+  const ops = snap.docs.map((d) => (batch) => batch.delete(doc(col('movements'), d.id)))
+  await commitSoon(ops)
+  await saveSetting('lastHistoryCleanupAt', Date.now())
+  return snap.size
+}
+
+/** "Abhi nahi" — agle das din tak dobara na poochein. */
+export async function snoozeHistoryCleanup() {
+  await saveSetting('lastHistoryCleanupAt', Date.now())
 }
 
 // ---------------------------------------------------------- public catalog

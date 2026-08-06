@@ -1,11 +1,22 @@
-import { esc, escAttr, on } from '../lib/dom.js'
+import { esc, escAttr, on, toast } from '../lib/dom.js'
 import { t, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, productById, backupDue, daysSinceBackup, khataTotals } from '../store.js'
+import {
+  state,
+  productById,
+  backupDue,
+  daysSinceBackup,
+  khataTotals,
+  historyCleanupDue,
+  countOldMovements,
+  pruneOldMovements,
+  snoozeHistoryCleanup,
+} from '../store.js'
 import { empty, loading, section, movementRow } from '../components.js'
 import { formatMoney, formatDateTime } from '../lib/format.js'
 import { runBackup } from '../lib/backup.js'
 import { groupStockAlerts } from './stock.js'
+import { confirmModal } from '../lib/modal.js'
 
 export function renderDashboard(root) {
   if (!state.ready) {
@@ -32,6 +43,7 @@ export function renderDashboard(root) {
 
       <div class="pad" style="padding-top:0">
         ${backupCard()}
+        ${historyCard()}
         ${
           state.products.length === 0
             ? empty(
@@ -103,6 +115,34 @@ export function renderDashboard(root) {
 
   // Card par likha hai "backup mehfooz karein" — to dabate hi wahi hona
   // chahiye. Pehle ye Settings kholta tha, jo wada poora nahi karta tha.
+  on(root, 'click', '[data-history-later]', async () => {
+    await snoozeHistoryCleanup().catch(() => {})
+  })
+
+  on(root, 'click', '[data-history-clean]', async (_e, el) => {
+    el.disabled = true
+    try {
+      const count = await countOldMovements()
+      if (!count) {
+        await snoozeHistoryCleanup()
+        return
+      }
+      const ok = await confirmModal({
+        title: t('settings.historyClean'),
+        message: t('settings.historyConfirm', { count }),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
+      if (!ok) return
+      const gone = await pruneOldMovements()
+      toast(t('settings.historyDone', { count: gone }))
+    } catch {
+      toast(t('error.generic'))
+    } finally {
+      el.disabled = false
+    }
+  })
+
   on(root, 'click', '[data-backup-now]', async (_e, el) => {
     await runBackup(el)
   })
@@ -119,6 +159,36 @@ export function renderDashboard(root) {
  * shopkeeper phir kabhi backup nahi karta. Ek tap me kaam ho jata hai, aur
  * backup ho jane par banner khud chala jata hai.
  */
+/**
+ * Purani stock history ki yaad dehani.
+ *
+ * Har das din me ek dafa, aur sirf tab jab waqai purana maal jama ho. "Abhi
+ * nahi" dabane par bhi das din khamoshi rehti hai — rozana ka kaam karte hue
+ * ye card baar baar saamne aana khud ek museebat ban jata.
+ */
+function historyCard() {
+  if (!historyCleanupDue()) return ''
+
+  return `
+    <div class="card card--warn" style="margin-bottom:16px">
+      <div class="row" style="gap:12px;align-items:flex-start">
+        <span style="font-size:1.4rem;line-height:1">🧹</span>
+        <div style="flex:1;min-width:0;text-align:start">
+          <p class="bold">${esc(t('home.historyTitle'))}</p>
+          <p class="small muted">${esc(t('home.historyBody'))}</p>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:12px">
+        <button class="btn btn--secondary btn--sm" data-history-later>
+          ${esc(t('home.historyLater'))}
+        </button>
+        <button class="btn btn--primary btn--sm" data-history-clean>
+          ${esc(t('settings.historyClean'))}
+        </button>
+      </div>
+    </div>`
+}
+
 function backupCard() {
   if (!backupDue()) return ''
 
