@@ -34,6 +34,22 @@ export function moreBar(shown, total) {
 }
 
 /**
+ * Pichhla tukra kis jagah par mangwaya gaya tha.
+ *
+ * Is ke baghair tukron ka faida hi khatam ho jata hai: har naya tukra aate hi
+ * nayi sentinel banti hai, aur agar wo abhi bhi nazar me ho to observer foran
+ * dobara chal parta hai — aur yehi silsila poori list aane tak chalta rehta
+ * hai. (Test me 156 me se saari 156 rows ek saath aa gayi thin.) Ab agla tukra
+ * tab hi aata hai jab dukandar waqai aage barha ho.
+ */
+let lastAutoY = -1
+
+/** Nayi list (search/filter badla) — ginti dobara shuru. */
+export function resetAutoLoad() {
+  lastAutoY = -1
+}
+
+/**
  * Neeche pahunchte hi agla tukra mangwana.
  *
  * `onMore()` ko bar bar chalne se rokna zaroori hai: observer ek hi nishan par
@@ -45,11 +61,26 @@ export function autoLoadMore(root, onMore) {
   if (!sentinel) return
   if (typeof IntersectionObserver !== 'function') return
 
+  if (Math.round(window.scrollY) === lastAutoY) {
+    /*
+     * Isi jagah par abhi abhi tukra aaya hai. Dukandar ke aage barhne ka
+     * intezar karte hain. Scroll par khud dobara koshish kar lete hain —
+     * observer sirf "andar aane" par chalta hai, aur sentinel to pehle se
+     * andar hai, is liye us se koi naya paighaam nahi milega.
+     */
+    window.addEventListener('scroll', () => autoLoadMore(root, onMore), {
+      once: true,
+      passive: true,
+    })
+    return
+  }
+
   let fired = false
   const observer = new IntersectionObserver(
     (entries) => {
       if (fired || !entries.some((e) => e.isIntersecting)) return
       fired = true
+      lastAutoY = Math.round(window.scrollY)
       observer.disconnect()
       onMore()
     },

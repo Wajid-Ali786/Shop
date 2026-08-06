@@ -13,6 +13,7 @@ import {
   startSync,
   stopSync,
   seedDefaultCategories,
+  seedKhataCategories,
   defaultPublicShopUid,
 } from './store.js'
 import { bottomNav, NAV_PATHS, loading } from './components.js'
@@ -30,7 +31,11 @@ import { renderProducts } from './screens/products.js'
 import { renderProductForm, clearProductDraft } from './screens/product-form.js'
 import { renderProductDetail } from './screens/product-detail.js'
 import { renderStock } from './screens/stock.js'
+import { renderKhata } from './screens/khata.js'
+import { renderKhataParty } from './screens/khata-party.js'
+import { renderKhataForm, clearKhataDraft } from './screens/khata-form.js'
 import { renderCategories } from './screens/categories.js'
+import { renderKhataCategories } from './screens/khata-categories.js'
 import { renderSettings } from './screens/settings.js'
 
 const root = $('#app')
@@ -123,6 +128,8 @@ if (!isConfigured()) {
         // Rules abhi publish na huye hon to yahan permission error aata hai —
         // banner user ko pehle hi bata deta hai, isliye chup reh sakte hain.
       })
+      // Khata ki apni categories — products wali se bilkul alag.
+      seedKhataCategories().catch(() => {})
     }
     render()
   })
@@ -250,13 +257,25 @@ function routeTo(path, screen) {
   if (path !== '/product/new' && !matchRoute(path, '/product/:id/edit')) {
     clearProductDraft()
   }
+  if (path !== '/khata/new' && !matchRoute(path, '/khata/:id/edit')) {
+    clearKhataDraft()
+  }
 
   if (path === '/') return renderDashboard(screen)
   if (path === '/products') return renderProducts(screen, render)
   if (path === '/stock') return renderStock(screen, render)
+  if (path === '/khata') return renderKhata(screen, render)
+  if (path === '/khata/new') return renderKhataForm(screen, null, render)
   if (path === '/settings') return renderSettings(screen, render)
   if (path === '/categories') return renderCategories(screen)
+  if (path === '/khata-categories') return renderKhataCategories(screen)
   if (path === '/product/new') return renderProductForm(screen, null, render)
+
+  const khataEdit = matchRoute(path, '/khata/:id/edit')
+  if (khataEdit) return renderKhataForm(screen, khataEdit.id, render)
+
+  const khataParty = matchRoute(path, '/khata/:id')
+  if (khataParty) return renderKhataParty(screen, khataParty.id, render)
 
   const edit = matchRoute(path, '/product/:id/edit')
   if (edit) return renderProductForm(screen, edit.id, render)

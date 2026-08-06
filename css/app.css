@@ -2117,3 +2117,35 @@ input[type='checkbox'] {
 .pullrefresh--busy .pullrefresh__spin {
   animation: spin 0.7s linear infinite;
 }
+
+/* ---------------------------------------------------------- udhaar khata */
+
+/*
+ * Baqaya raqam ka bara ada.
+ *
+ * `dir="ltr"` markup me lagi hai: Urdu me poori screen RTL hoti hai aur
+ * "Rs 1,200" ulat kar "1,200 Rs" ban jata tha.
+ */
+.khatatotal {
+  text-align: center;
+}
+.khatatotal__value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 2px 0;
+}
+.khatatotal__value--owed {
+  color: var(--danger);
+}
+
+/* Row par baqaya — jispar kuch baqi hai wo aankh me aana chahiye. */
+.khatabal {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.khatabal--owed {
+  color: var(--danger);
+}

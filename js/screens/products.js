@@ -7,10 +7,50 @@ import { icon, empty, loading, productCard, productGridCard, fillImages } from '
 import { openStockSheet } from './stock-sheet.js'
 import { wireQuickStock } from '../lib/quick-stock.js'
 import { wireDragScroll } from '../lib/dragscroll.js'
-import { PAGE_SIZE, moreBar, autoLoadMore } from '../lib/paging.js'
+import { PAGE_SIZE, moreBar, autoLoadMore, resetAutoLoad } from '../lib/paging.js'
 
 // Screen dobara render hone par bhi user ki search/filter zaya na ho.
 const ui = { query: '', categoryId: 'all', sort: 'name', view: loadView(), showArchived: false }
+
+/**
+ * Har category ki apni tarteeb — aur phone band karne ke baad bhi yaad.
+ *
+ * Ek hi tarteeb sab par thopna asal kaam se mail nahi khati. "Dairy" me
+ * dukandar miyaad dekhta hai, "Drinks" me kaun sa maal khatam ho raha hai, aur
+ * poori list me sirf naam se dhoondta hai. Har dafa dropdown badalna parta tha,
+ * aur app dobara khulte hi wo bhi zaya ho jati thi.
+ *
+ * Ye faisla is phone ka hai, dukan ka nahi — is liye localStorage me hai,
+ * Firestore me nahi. Dukandar ke phone aur kaunter wale phone ki apni apni
+ * aadat ho sakti hai.
+ */
+const SORT_KEY = 'karyana.sortByCategory'
+
+function loadSorts() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SORT_KEY) || '{}')
+    return raw && typeof raw === 'object' ? raw : {}
+  } catch {
+    return {} // kharab ho gaya to sab default par
+  }
+}
+
+let sortByCategory = loadSorts()
+
+/** Is category par pichhli dafa kya chala tha? */
+function sortFor(categoryId) {
+  return sortByCategory[categoryId] || 'name'
+}
+
+function saveSortFor(categoryId, sort) {
+  sortByCategory = { ...sortByCategory, [categoryId]: sort }
+  ui.sort = sort
+  try {
+    localStorage.setItem(SORT_KEY, JSON.stringify(sortByCategory))
+  } catch {
+    // Private mode — is session me phir bhi chalta rahega.
+  }
+}
 
 /**
  * Ek baar me itni rows screen par aati hain.
@@ -26,6 +66,7 @@ let shownCount = PAGE_SIZE
 /** Filter/search badalne par dobara shuru se — warna nayi list adhoori lagti hai. */
 function resetPaging() {
   shownCount = PAGE_SIZE
+  resetAutoLoad()
 }
 
 /** List ya grid — dukandar ka chuna hua view yaad rehta hai. */
@@ -46,6 +87,9 @@ export function renderProducts(root, rerender) {
     root.innerHTML = loading()
     return
   }
+
+  // App dobara khulne par bhi is category ki apni tarteeb chale.
+  ui.sort = sortFor(ui.categoryId)
 
   const visible = filterProducts()
 
@@ -253,7 +297,8 @@ function wire(root, rerender) {
   const sortSelect = root.querySelector('#sort')
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
-      ui.sort = e.target.value
+      // Sirf isi category ke liye yaad rehta hai.
+      saveSortFor(ui.categoryId, e.target.value)
       resetPaging()
       rerender()
     })
@@ -262,6 +307,8 @@ function wire(root, rerender) {
   on(root, 'click', '[data-cat]', (_e, el) => {
     const value = el.dataset.cat
     ui.categoryId = ui.categoryId === value ? 'all' : value
+    // Is category par pichhli dafa jo tarteeb thi, wohi wapas.
+    ui.sort = sortFor(ui.categoryId)
     resetPaging()
     rerender()
   })

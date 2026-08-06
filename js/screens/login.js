@@ -1,8 +1,9 @@
-import { esc, $, toast } from '../lib/dom.js'
+import { esc, escAttr, $, toast } from '../lib/dom.js'
 import { t } from '../i18n/index.js'
 import { field, passwordInput, wirePasswordToggles } from '../components.js'
 import { navigate } from '../lib/router.js'
 import { signIn, signUp, sendPasswordReset, authErrorKey } from '../firebase.js'
+import { savedLogin, rememberLogin, forgetLogin } from '../lib/trusted.js'
 
 /**
  * Login / account banane ka form. Site khulne par ye seedha nazar nahi aata —
@@ -18,6 +19,16 @@ export function renderLogin(root, initialMode = 'signin') {
 
   function draw() {
     const isSignUp = mode === 'signup'
+
+    /*
+     * Bharosay wale phone par khane pehle se bhare hue.
+     *
+     * Naya account banate waqt nahi: wahan purana login bharna ulta nuqsaan
+     * deta — dukandar doosri dukan ka account banana chahta hai aur form me
+     * pehle wala email para hota hai.
+     */
+    const remembered = isSignUp ? null : savedLogin()
+    const prefill = { email: remembered?.email || '', password: remembered?.password || '' }
 
     root.innerHTML = `
       <div class="auth">
@@ -35,13 +46,15 @@ export function renderLogin(root, initialMode = 'signin') {
           ${field(
             t('auth.email'),
             `<input id="auth-email" type="email" inputmode="email" autocomplete="email"
-               autocapitalize="none" spellcheck="false" required dir="ltr">`,
+               autocapitalize="none" spellcheck="false" required dir="ltr"
+               value="${escAttr(prefill.email)}">`,
           )}
           ${field(
             t('auth.password'),
             passwordInput('auth-password', {
               autocomplete: isSignUp ? 'new-password' : 'current-password',
               required: true,
+              value: prefill.password,
             }),
             { hint: isSignUp ? t('auth.passwordHint') : '' },
           )}
@@ -114,9 +127,19 @@ export function renderLogin(root, initialMode = 'signin') {
       try {
         if (isSignUp) await signUp(email, password)
         else await signIn(email, password)
+        // Sirf tab likhta hai jab dukandar ne Settings me khud ijazat di ho.
+        rememberLogin(email, password)
         // Kamyabi par onAuthStateChanged khud app ko aage le jayega.
       } catch (err) {
         busy = false
+        /*
+         * Mehfooz kiya hua password ab chalta nahi — kisi doosre phone se badla
+         * gaya hoga. Usay pakre rakhne ka matlab sirf ye hai ke har dafa wohi
+         * ghalat password khud bhara jaye aur dukandar ko wajah samajh na aaye.
+         */
+        if (err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password') {
+          forgetLogin()
+        }
         error = t(authErrorKey(err?.code))
         draw()
         $('#auth-email', root).value = email

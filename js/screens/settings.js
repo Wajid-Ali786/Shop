@@ -16,10 +16,11 @@ import {
 import { appBar, field, options, icon, section } from '../components.js'
 import { applyTheme, setTheme, getTheme } from '../lib/theme.js'
 import { currentEmail, signOut } from '../firebase.js'
-import { openChangeEmailSheet, openChangePasswordSheet } from './account.js'
+import { openChangeEmailSheet, openChangePasswordSheet, openTrustDeviceSheet } from './account.js'
 import { chooseModal, alertModal, confirmModal } from '../lib/modal.js'
 import { runBackup } from '../lib/backup.js'
 import { installState, promptInstall, onInstallChange } from '../lib/install.js'
+import { isTrusted, setTrusted } from '../lib/trusted.js'
 
 export function renderSettings(root, rerender) {
   const settings = state.settings
@@ -74,8 +75,12 @@ export function renderSettings(root, rerender) {
 
         ${section(
           t('nav.settings'),
-          `<button class="list-row" data-go="/categories">
+          `<button class="list-row" data-go="/categories" style="margin-bottom:8px">
              <span class="bold" style="flex:1">${esc(t('categories.title'))}</span>
+             ${icon('chevron', 'flip')}
+           </button>
+           <button class="list-row" data-go="/khata-categories">
+             <span class="bold" style="flex:1">${esc(t('khataCat.title'))}</span>
              ${icon('chevron', 'flip')}
            </button>`,
         )}
@@ -131,6 +136,8 @@ export function renderSettings(root, rerender) {
            </div>`,
         )}
 
+        ${trustedSection()}
+
         ${section(
           t('settings.account'),
           `<div class="card">
@@ -169,6 +176,30 @@ export function renderSettings(root, rerender) {
     el.disabled = false
     if (outcome === 'accepted') toast(t('settings.installStarted'))
     // 'dismissed' par kuch nahi kehte — dukandar ne khud mana kiya hai.
+    rerender()
+  })
+
+  // ---- trusted device ----
+  on(root, 'click', '[data-trusted]', (_e, el) => {
+    const turnOn = el.dataset.trusted === 'on'
+    if (turnOn === isTrusted()) return
+
+    if (turnOn) {
+      // Pehle switch chalu karte hain — warna sheet me `rememberLogin()` ke
+      // waqt switch band hota hai aur wo chup chaap kuch mehfooz nahi karta.
+      setTrusted(true)
+      openTrustDeviceSheet((saved) => {
+        // Password tasdeeq na ho to switch bhi wapas band — warna dukandar ko
+        // "chalu hai" dikhta rehta aur khane phir bhi khali aate.
+        if (!saved) setTrusted(false)
+        rerender()
+      })
+      return
+    }
+
+    setTrusted(false)
+    // Band karte hi mehfooz kiya hua login mit chuka hai (dekhein trusted.js).
+    toast(t('settings.trustedCleared'))
     rerender()
   })
 
@@ -325,6 +356,34 @@ export function renderSettings(root, rerender) {
   // Install ka mauqa aksar screen banne ke BAAD milta hai — us waqt button
   // khud aa jana chahiye, warna dukandar ko sirf hidayat nazar aati rehti hain.
   return onInstallChange(rerender)
+}
+
+/**
+ * "Ye mera apna phone hai" — login ke khane khud bhare hue aayein.
+ *
+ * Tanbeeh jaan boojh kar chhoti nahi likhi. Dukandar ko ye faisla samajh kar
+ * karna chahiye: is ke chalu hote hi password is phone me mehfooz ho jata hai,
+ * aur phone kisi aur ke haath lage to wo andar pahunch sakta hai. Isi liye ye
+ * by default band hai.
+ */
+function trustedSection() {
+  const on = isTrusted()
+
+  return section(
+    t('settings.trusted'),
+    `<div class="card">
+       <p class="small muted" style="margin-bottom:12px">${esc(t('settings.trustedDesc'))}</p>
+       <div class="choices choices--2" style="margin-bottom:10px">
+         <button class="choice${on ? ' choice--active' : ''}" data-trusted="on">
+           ${esc(t('settings.catalogOn'))}
+         </button>
+         <button class="choice${on ? '' : ' choice--active'}" data-trusted="off">
+           ${esc(t('settings.catalogOff'))}
+         </button>
+       </div>
+       <p class="field__hint">${esc(t('settings.trustedWarn'))}</p>
+     </div>`,
+  )
 }
 
 /**
