@@ -1,7 +1,7 @@
 import { esc, escAttr, on } from '../lib/dom.js'
 import { t, localizedName, getLang } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, productById, backupDue, daysSinceBackup } from '../store.js'
+import { state, productById, backupDue, daysSinceBackup, khataTotals } from '../store.js'
 import { empty, loading, section, movementRow } from '../components.js'
 import { formatMoney, formatDateTime } from '../lib/format.js'
 import { runBackup } from '../lib/backup.js'
@@ -45,6 +45,25 @@ export function renderDashboard(root) {
             ${stat(t('home.totalProducts'), String(state.products.length), '', '/products')}
             ${stat(t('home.inventoryValue'), formatMoney(value, state.settings.currency), '', '', true)}
           </div>
+
+          ${
+            khataTotals().total > 0
+              ? `<div class="grid-2" style="margin-bottom:12px">
+                   ${stat(
+                     t('khata.totalOut'),
+                     formatMoney(khataTotals().total, state.settings.currency),
+                     'warn',
+                     '/khata',
+                   )}
+                   ${stat(
+                     t('khata.count', { count: khataTotals().people }),
+                     String(khataTotals().people),
+                     '',
+                     '/khata',
+                   )}
+                 </div>`
+              : ''
+          }
 
           <div class="grid-2" style="margin-bottom:24px">
             ${stat(t('home.lowStock'), String(groups.low.length), groups.low.length ? 'warn' : '', '/stock')}

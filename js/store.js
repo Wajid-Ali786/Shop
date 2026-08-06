@@ -39,6 +39,9 @@ export const state = {
   products: [],
   categories: [],
   movements: [],
+  // Udhaar khata — sirf dukandar tak, grahak wali list me kabhi nahi.
+  khataParties: [],
+  khataCategories: [],
   settings: { ...defaultSettings() },
   ready: false,
   error: null,
@@ -131,6 +134,12 @@ async function commitInChunks(ops) {
   }
 }
 
+
+/** Paison ka hisaab — do hindse se aage jaane ka koi matlab nahi. */
+function roundMoney(value) {
+  return Math.round((Number(value) || 0) * 100) / 100
+}
+
 // ------------------------------------------------------- live subscriptions
 
 /**
@@ -174,6 +183,22 @@ export function startSync() {
       onError,
     ),
     onSnapshot(
+      query(col('khataParties'), orderBy('name')),
+      (snap) => {
+        state.khataParties = snap.docs.map(withId)
+        emit()
+      },
+      onError,
+    ),
+    onSnapshot(
+      query(col('khataCategories'), orderBy('sortOrder')),
+      (snap) => {
+        state.khataCategories = snap.docs.map(withId)
+        emit()
+      },
+      onError,
+    ),
+    onSnapshot(
       shopRef(),
       (snap) => {
         state.settings = { ...defaultSettings(), ...(snap.data() || {}) }
@@ -197,6 +222,8 @@ export function stopSync() {
   state.products = []
   state.categories = []
   state.movements = []
+  state.khataParties = []
+  state.khataCategories = []
   state.settings = defaultSettings()
   state.ready = false
   state.error = null
@@ -791,6 +818,244 @@ export async function seedDefaultCategories() {
   return DEFAULT_CATEGORIES.length
 }
 
+// -------------------------------------------------------------- udhaar khata
+
+/**
+ * Udhaar khata — kis ne dukan ka kitna dena hai.
+ *
+ * Teen cheezein hain aur teenon `shops/{uid}` ke andar, yaani sirf dukandar
+ * tak mehdood. Grahak wali public list me ye kabhi nahi jatin: wahan har field
+ * `publicShapeOf()` me haath se ginti hai, is liye nayi collection khud-ba-khud
+ * kabhi public nahi hoti. Ye chup chaap nahi chhoRa — udhaar ka data aam hona
+ * sab se bara nuqsaan hota.
+ *
+ * `balance` kabhi haath se nahi likha jata. Har entry ek hi transaction me
+ * party ka balance aur entry ka record likhti hai — wahi tareeqa jo stock me
+ * pehle se chal raha hai — taake history aur balance kabhi alag na hon.
+ */
+
+/** Shuruati categories — teenon ka naam, icon, sab dukandar badal sakta hai. */
+const DEFAULT_KHATA_CATEGORIES = [
+  { nameEn: 'Small', nameUr: 'چھوٹا', icon: '🟢' },
+  { nameEn: 'Big', nameUr: 'بڑا', icon: '🔴' },
+  { nameEn: 'Temporary', nameUr: 'عارضی', icon: '⏳' },
+]
+
+export function khataPartyById(id) {
+  return state.khataParties.find((p) => p.id === id) || null
+}
+
+export function khataCategoryById(id) {
+  return state.khataCategories.find((c) => c.id === id) || null
+}
+
+/**
+ * Kul kitna lena hai, aur kitne logon se.
+ *
+ * Sirf wo khate ginte hain jin par kuch baqi hai. Jin ka hisaab barabar ho
+ * chuka wo ginti me aa kar sirf tasveer dhundli karte hain.
+ */
+export function khataTotals() {
+  let total = 0
+  let people = 0
+  for (const party of state.khataParties) {
+    const balance = Number(party.balance || 0)
+    if (balance > 0) {
+      total += balance
+      people += 1
+    }
+  }
+  return { total: roundMoney(total), people }
+}
+
+export async function createKhataParty(data) {
+  const ref = await addDoc(col('khataParties'), {
+    name: (data.name || '').trim(),
+    phone: data.phone?.trim() || null,
+    note: data.note?.trim() || null,
+    categoryIds: data.categoryIds || [],
+    // Naya khata hamesha sifar se shuru hota hai — raqam sirf entry se aati hai.
+    balance: 0,
+    status: 'active',
+    lastEntryAt: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateKhataParty(id, changes) {
+  // `balance` yahan se kabhi nahi badalta — wo sirf entry likhne par badalta
+  // hai. Warna ek edit poori history ko jhoota kar deta.
+  const { balance, ...safe } = changes
+  await updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() })
+}
+
+/** Khata mitane par us ki poori history bhi jati hai — warna kachra reh jata. */
+export async function deleteKhataParty(id) {
+  const snap = await getDocs(query(col('khataEntries'), where('partyId', '==', id)))
+  const ops = [(batch) => batch.delete(doc(col('khataParties'), id))]
+  for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
+  await commitInChunks(ops)
+}
+
+// ---- khata categories (products wali se bilkul alag) ----
+
+export async function createKhataCategory(data) {
+  const ref = await addDoc(col('khataCategories'), {
+    nameEn: (data.nameEn || '').trim(),
+    nameUr: data.nameUr?.trim() || null,
+    icon: data.icon || '📓',
+    sortOrder: data.sortOrder ?? (state.khataCategories.length + 1) * 10,
+    createdAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function updateKhataCategory(id, changes) {
+  await updateDoc(doc(col('khataCategories'), id), changes)
+}
+
+/** Category mitne par khate nahi mitte — sirf un par se ye nishan hat jata hai. */
+export async function deleteKhataCategory(id) {
+  const ops = [(batch) => batch.delete(doc(col('khataCategories'), id))]
+  for (const party of state.khataParties) {
+    if ((party.categoryIds || []).includes(id)) {
+      ops.push((batch) =>
+        batch.update(doc(col('khataParties'), party.id), {
+          categoryIds: party.categoryIds.filter((c) => c !== id),
+          updatedAt: serverTimestamp(),
+        }),
+      )
+    }
+  }
+  await commitInChunks(ops)
+}
+
+export async function seedKhataCategories() {
+  // Wahi ehtiyat jo products wali categories me hai: server se poochte hain,
+  // local list se nahi — warna har login par teen nayi ban jatin.
+  const existing = await getDocs(col('khataCategories'))
+  if (!existing.empty) return 0
+
+  const batch = writeBatch(dbf)
+  DEFAULT_KHATA_CATEGORIES.forEach((cat, i) => {
+    batch.set(doc(col('khataCategories')), { ...cat, sortOrder: (i + 1) * 10 })
+  })
+  await batch.commit()
+  return DEFAULT_KHATA_CATEGORIES.length
+}
+
+// ---- entries ----
+
+/**
+ * Ek lein dein likhna.
+ *
+ * `type`:
+ *   'diya' — udhaar diya (balance barhta hai)
+ *   'mila' — paisay milay (balance ghatta hai)
+ *
+ * `items` — kya le kar gaya. Har cheez ya to app ki product hai (`productId`)
+ * ya sirf likhi hui (`text`). Product chunne se **stock nahi badalta** — ye
+ * jaan boojh kar hai: khata sirf hisaab ka record hai, maal ka nahi. Stock
+ * pehle ki tarah Stock wale hisse se hi badalta hai.
+ *
+ * `collectedBy` — kaun aaya tha lene. Aksar khata kisi aur ka hota hai aur
+ * lene koi aur aata hai (bachcha, mulazim, parosi). Wo naam yahan likha jata
+ * hai, warna baad me jhagra hota hai ke "maine to liya hi nahi tha".
+ */
+export async function addKhataEntry({ partyId, type, amount, items, collectedBy, note }) {
+  const value = roundMoney(Math.abs(Number(amount) || 0))
+  if (!value) throw new Error('Raqam zaroori hai')
+
+  const partyRef = doc(col('khataParties'), partyId)
+  const entryRef = doc(col('khataEntries'))
+
+  const cleanItems = (items || [])
+    .map((it) => ({
+      productId: it.productId || null,
+      text: (it.text || '').trim(),
+      qty: it.qty ? String(it.qty).trim() : null,
+    }))
+    .filter((it) => it.text || it.productId)
+
+  const buildEntry = (balanceAfter, offline) => ({
+    partyId,
+    type,
+    amount: value,
+    items: cleanItems,
+    collectedBy: collectedBy?.trim() || null,
+    note: note?.trim() || null,
+    balanceAfter,
+    createdAt: serverTimestamp(),
+    ...(offline ? { offline: true } : {}),
+  })
+
+  const nextBalance = (current) =>
+    roundMoney(type === 'diya' ? current + value : current - value)
+
+  if (navigator.onLine) {
+    try {
+      return await runTransaction(dbf, async (tx) => {
+        const snap = await tx.get(partyRef)
+        if (!snap.exists()) throw new Error('Khata nahi mila')
+
+        const balanceAfter = nextBalance(Number(snap.data().balance || 0))
+        tx.update(partyRef, {
+          balance: balanceAfter,
+          lastEntryAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+        tx.set(entryRef, buildEntry(balanceAfter, false))
+        return balanceAfter
+      })
+    } catch (err) {
+      // Wahi hi hidayat jo stock me hai: sirf internet ki nakami maaf hai.
+      // Do device takra jayen to purane balance par naya hisaab likhna udhaar
+      // ke record ko jhoota kar deta hai — aur wo paison ka maamla hai.
+      const network = err?.code === 'unavailable' || err?.code === 'deadline-exceeded'
+      if (!network) throw err
+    }
+  }
+
+  // ---- offline raasta ----
+  const local = khataPartyById(partyId)
+  if (!local) throw new Error('Khata nahi mila')
+
+  const balanceAfter = nextBalance(Number(local.balance || 0))
+  const batch = writeBatch(dbf)
+  batch.update(partyRef, {
+    balance: balanceAfter,
+    lastEntryAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  batch.set(entryRef, buildEntry(balanceAfter, true))
+  batch.commit().catch(() => {})
+
+  return balanceAfter
+}
+
+/**
+ * Ek khate ki poori history.
+ *
+ * Products wale detail screen ki tarah: sirf khulne par mangwate hain, poori
+ * app ke saath nahi — warna har dukan ke har khate ki har entry hamesha
+ * download hoti rehti.
+ */
+export function watchKhataEntries(partyId, callback) {
+  if (!currentUid()) return () => {}
+
+  return onSnapshot(
+    query(col('khataEntries'), where('partyId', '==', partyId)),
+    (snap) => {
+      const rows = snap.docs.map(withId)
+      rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      callback(rows)
+    },
+    () => callback([]),
+  )
+}
+
 // ---------------------------------------------------------- public catalog
 
 /**
@@ -1110,9 +1375,11 @@ export async function defaultPublicShopUid() {
  * rakhta hai.
  */
 export async function buildExport() {
-  const [movementSnap, imageSnap] = await Promise.all([
+  const [movementSnap, imageSnap, khataEntrySnap] = await Promise.all([
     getDocs(col('movements')),
     getDocs(col('images')),
+    // Khate ki entries bhi seedha server se — `state` un ko rakhta hi nahi.
+    getDocs(col('khataEntries')),
   ])
 
   return {
@@ -1124,6 +1391,11 @@ export async function buildExport() {
     products: state.products,
     movements: movementSnap.docs.map(withId),
     images: imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })),
+    // Udhaar khata. Ye backup me hona LAZMI hai: ye wo hisaab hai jo dukandar
+    // ke zehen me nahi, sirf yahan hota hai — gum ho jaye to wapas nahi aata.
+    khataParties: state.khataParties,
+    khataCategories: state.khataCategories,
+    khataEntries: khataEntrySnap.docs.map(withId),
   }
 }
 
@@ -1134,7 +1406,7 @@ export async function buildExport() {
  * badle — jaise jab tasveerein product ke andar se nikal kar apni collection
  * me gayin.
  */
-export const EXPORT_VERSION = 5
+export const EXPORT_VERSION = 6
 
 /**
  * File qabil-e-qubool hai?
@@ -1197,6 +1469,9 @@ export async function restoreExport(data, mode = 'merge') {
       ['products', data.products, (p) => strip(p)],
       ['movements', data.movements || [], (m) => strip(m)],
       ['images', data.images || [], (img) => ({ data: img.data })],
+      ['khataCategories', data.khataCategories || [], (c) => strip(c)],
+      ['khataParties', data.khataParties || [], (p) => strip(p)],
+      ['khataEntries', data.khataEntries || [], (e) => strip(e)],
       // Bikri wala hissa nikal diya gaya hai; purane data me `sales` bache ho
       // sakte hain, aur "replace" ka matlab hai poori safai.
       ['sales', [], null],

@@ -30,6 +30,9 @@ export const ICONS = {
   viewGrid:
     '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  // Khata — purani bahi jaisi kitab.
+  khata:
+    '<path d="M5 4h11a2 2 0 012 2v14H7a2 2 0 01-2-2V4z" stroke-linejoin="round"/><path d="M5 17h11M9 8h5" stroke-linecap="round"/>',
   eyeOff:
     '<path d="M10.6 6.2A9.9 9.9 0 0112 6c6.4 0 10 7 10 7a17.4 17.4 0 01-3 3.7M6.5 7.6A17.4 17.4 0 002 13s3.6 7 10 7a9.8 9.8 0 004.6-1.1" stroke-linecap="round"/><path d="M9.9 10a3 3 0 004.2 4.2M3 3l18 18" stroke-linecap="round"/>',
 }
@@ -403,6 +406,7 @@ export function movementRow(movement, product, productName = '') {
 const TABS = [
   { path: '/', key: 'nav.home', icon: 'home' },
   { path: '/products', key: 'nav.products', icon: 'products' },
+  { path: '/khata', key: 'nav.khata', icon: 'khata' },
   { path: '/stock', key: 'nav.stock', icon: 'stock' },
   { path: '/settings', key: 'nav.settings', icon: 'settings' },
 ]
