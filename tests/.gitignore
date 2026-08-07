@@ -1,0 +1,11 @@
+# npm ka apna maal
+node_modules
+
+# test ke dauran bani cheezein
+shots/
+*.log
+firestore-debug.log
+
+# Firebase SDK ki local copy — sirf band network wale mahol me chahiye hoti
+# hai (dekhein README). 1.5 MB ki file repo me rakhne ka koi faida nahi.
+vendor/

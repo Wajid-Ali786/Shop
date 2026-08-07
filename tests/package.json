@@ -1,0 +1,14 @@
+{
+  "name": "karyana-shop-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "emulators": "firebase emulators:start --project karyana-test --config ../firebase.json",
+    "serve": "node serve.mjs",
+    "test": "node run.mjs"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.25.1",
+    "playwright": "^1.62.1"
+  }
+}
