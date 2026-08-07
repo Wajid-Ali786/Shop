@@ -230,6 +230,12 @@ export const ur = {
   'khata.depositAfter': 'اس کے بعد جمع',
   'khata.hasDeposit': 'میرے پاس پیسہ رکھتا ہے',
   'khata.hasDepositHint': 'اُن لوگوں کے لیے چالو کریں جو پیسہ رکھ کر تھوڑا تھوڑا لیتے ہیں',
+  'khata.settleFromDeposit': 'جمع میں سے {amount} کاٹ دیں',
+  'khata.settleTitle': 'جمع سے چکائیں',
+  'khata.settleConfirm':
+    '{name} نے جو پیسہ آپ کے پاس رکھا ہے اُس میں سے {amount} نکال کر اتنا اُدھار ختم کر دیا جائے گا۔ دونوں باتیں کھاتے میں لکھی جائیں گی۔',
+  'khata.settleDo': 'چکائیں',
+  'khata.settleDone': 'جمع میں سے چکا دیا گیا',
 
   'khata.jamaShort': 'جمع',
 
@@ -446,6 +452,13 @@ export const ur = {
   'settings.exportDesc':
     'تمام پروڈکٹس اور اسٹاک ایک فائل میں اس فون پر محفوظ کرتا ہے۔ آپ کا ڈیٹا فائربیس میں پہلے ہی محفوظ ہے — یہ صرف ایک اضافی کاپی ہے۔',
   'settings.exported': 'فائل محفوظ ہو گئی',
+  'settings.backupBigMessage':
+    '{photos} تصاویر کے ساتھ یہ فائل تقریباً {size} کی بنے گی۔ اتنی بڑی فائل واٹس ایپ پر بھیجنا مشکل ہے۔',
+  'settings.backupWithPhotos': 'سب کچھ، تصاویر سمیت ({size})',
+  'settings.backupWithPhotosDesc': 'مکمل کاپی۔ کچھ بھی نہیں چھوٹتا۔',
+  'settings.backupNoPhotos': 'تصاویر چھوڑ دیں (چھوٹی فائل)',
+  'settings.backupNoPhotosDesc':
+    'قیمتیں، اسٹاک، ہسٹری اور ادھار کھاتہ سب آ جائے گا۔ تصاویر دوبارہ کھینچی جا سکتی ہیں۔',
   'settings.restore': 'فائل سے بحال کریں',
   'settings.restoreDesc':
     'بیک اپ فائل واپس آپ کی دکان میں لوڈ کرتا ہے۔ تصاویر اور اسٹاک ہسٹری بھی واپس آ جاتی ہیں۔',

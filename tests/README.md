@@ -57,6 +57,9 @@ npm test khata dates
 | `offline.mjs` | Internet band ho to kaam ruke nahi, aur signal aate hi sab server par pahunche |
 | `dates.mjs` | Lein dein ki tareekh dukandar chunta hai, aur badalne par hisaab dobara bane |
 | `history.mjs` | Purani stock history saaf karna — aur stock ki ginti ka na badalna |
+| `credit-limit.mjs` | Udhaar ki hadd: tanbeeh aati hai, magar rokti nahi |
+| `settle.mjs` | Jama pare paison se udhaar chukana — dono zanjeerein sahi rehti hain |
+| `backup-light.mjs` | Bina tasveeron wala backup, aur us se tasveerein na mitna |
 | `rules.mjs` | Firestore rules khud: ghalat data ruke, sahi data guzre |
 
 `rules.mjs` jaan boojh kar app ka raasta chhor kar **seedha Firestore** par
@@ -106,6 +109,19 @@ tests/vendor/firebase-firestore.js
 
 Mojood hon to harness khud unhein parosta hai; na hon to seedha gstatic se aati
 hain. App ka code dono soorton me ek hi rehta hai.
+
+gstatic tak pahunch na ho to ye teen files npm se bhi ban jati hain:
+
+```bash
+npm install --no-save firebase@12.17.0 esbuild
+printf "export * from 'firebase/app'\nexport * from 'firebase/auth'\nexport * from 'firebase/firestore'\n" > /tmp/fb.mjs
+./node_modules/.bin/esbuild /tmp/fb.mjs --bundle --format=esm --outfile=vendor/firebase-app.js
+printf "export * from './firebase-app.js'\n" | tee vendor/firebase-auth.js > vendor/firebase-firestore.js
+```
+
+Do chhoti files jaan boojh kar sirf pehli ko aage bhejti hain: teenon URL ek hi
+folder me hain, is liye `./firebase-app.js` teenon ke liye ek hi module banta
+hai — yaani Firebase app ka ek hi instance, jaisa gstatic par hota hai.
 
 Playwright ka apna Chromium na ho to raasta batayein:
 

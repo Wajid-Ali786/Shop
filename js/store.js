@@ -1195,6 +1195,53 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
 }
 
 /**
+ * Jama pare paison se udhaar chukana.
+ *
+ * Dukan me ye roz hota hai: banday ke paanch hazar jama pare hain aur barah
+ * sau ka udhaar chal raha hai. Dukandar dono ko aamne saamne kar deta hai —
+ * na koi note nikalta hai, na jaib me jata hai.
+ *
+ * Hisaab me ye ek kaam nahi, do hain: jama me se raqam nikli (`wapas`), aur
+ * wohi raqam udhaar me jama hui (`milay`). Dono likhni zaroori hain, warna
+ * kisi ek zanjeer ka `balanceAfter` jhoot ho jata hai. Pehle dukandar ko ye
+ * dono entries khud likhni parti thin — aur ek likh kar doosri bhool jana
+ * bilkul aam baat hai.
+ *
+ * Raqam wohi jitni dono me se kam hai: na jama manfi ho sakta hai, na udhaar
+ * apni hadd se zyada chukaya ja sakta hai.
+ */
+export async function settleFromDeposit(partyId, at = null) {
+  const party = khataPartyById(partyId)
+  if (!party) throw new Error('Khata nahi mila')
+
+  const amount = settleableAmount(party)
+  if (!amount) throw new Error('Chukane ke liye kuch nahi hai')
+
+  const note = 'Jama se chukaya'
+
+  /*
+   * Tarteeb jaan boojh kar: pehle jama se nikalo, phir udhaar me daalo.
+   *
+   * Beech me kuch toot jaye (internet, band phone) to adhoora haal ye hoga ke
+   * jama kam ho gaya magar udhaar wahi hai — yaani dukandar ka nuqsaan nazar
+   * aata hai aur wo fauran pakar leta hai. Ulti tarteeb me adhoora haal
+   * grahak ka udhaar chupke se kam kar deta — jo kisi ko nazar nahi aata.
+   */
+  await addKhataEntry({ partyId, kind: 'wapas', amount, note, at })
+  await addKhataEntry({ partyId, kind: 'milay', amount, note, at })
+
+  return amount
+}
+
+/** Jama aur udhaar me se jo kam ho — usi ka hisaab barabar ho sakta hai. */
+export function settleableAmount(party) {
+  const balance = Number(party?.balance || 0)
+  const deposit = Number(party?.deposit || 0)
+  if (!party?.hasDeposit || balance <= 0 || deposit <= 0) return 0
+  return roundMoney(Math.min(balance, deposit))
+}
+
+/**
  * Udhaar ki hadd ka hisaab.
  *
  * `null` = koi hadd nahi. Warna batata hai ke abhi kitni gunjaish baqi hai,
@@ -1756,10 +1803,13 @@ export async function defaultPublicShopUid() {
  * Movements bhi seedha server se, kyunki `state.movements` sirf aakhri 100
  * rakhta hai.
  */
-export async function buildExport() {
+export async function buildExport({ withImages = true } = {}) {
   const [movementSnap, imageSnap, khataEntrySnap] = await Promise.all([
     getDocs(col('movements')),
-    getDocs(col('images')),
+    // Tasveerein poori file ka 95% wazan hoti hain. Halki file mangi ho to
+    // unhe mangwate bhi nahi — sirf file chhoti nahi hoti, backup khud tez
+    // ho jata hai.
+    withImages ? getDocs(col('images')) : Promise.resolve(null),
     // Khate ki entries bhi seedha server se — `state` un ko rakhta hi nahi.
     getDocs(col('khataEntries')),
   ])
@@ -1772,13 +1822,43 @@ export async function buildExport() {
     categories: state.categories,
     products: state.products,
     movements: movementSnap.docs.map(withId),
-    images: imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })),
+    images: imageSnap ? imageSnap.docs.map((d) => ({ id: d.id, data: d.data().data })) : [],
+    /*
+     * Ye nishan zaroori hai, khali `images` kaafi nahi.
+     *
+     * Restore ke waqt farq karna parta hai: "is dukan me tasveerein thin hi
+     * nahi" aur "tasveerein hain magar is file me nahi lain". Doosri soorat
+     * me file wapas daalne par mojooda tasveerein mitni nahi chahiye.
+     */
+    ...(withImages ? {} : { imagesSkipped: true }),
     // Udhaar khata. Ye backup me hona LAZMI hai: ye wo hisaab hai jo dukandar
     // ke zehen me nahi, sirf yahan hota hai — gum ho jaye to wapas nahi aata.
     khataParties: state.khataParties,
     khataCategories: state.khataCategories,
     khataEntries: khataEntrySnap.docs.map(withId),
   }
+}
+
+/**
+ * Backup file kitni bhaari hogi — takhmeenan.
+ *
+ * Har tasveer compress ho kar ~70 KB rehti hai, aur JSON me base64 ban kar
+ * takreeban ek tihai aur phool jati hai. Baqi sab kuch (products, khata,
+ * movements) is ke saamne kuch bhi nahi — is liye ginti sirf tasveeron ki.
+ *
+ * Ye asal size nahi hai aur ho bhi nahi sakta: asal jaanne ke liye poori
+ * images collection download karni pare gi, yaani wohi mehnga kaam jis se
+ * bachne ke liye ye ginti ki ja rahi hai. Faisla lene ke liye takhmeena kaafi
+ * hai.
+ */
+const BYTES_PER_PHOTO = 95 * 1024
+
+export function photoCount() {
+  return state.products.filter((p) => p.imageId).length
+}
+
+export function estimatedBackupBytes() {
+  return photoCount() * BYTES_PER_PHOTO
 }
 
 /**
@@ -1850,7 +1930,18 @@ export async function restoreExport(data, mode = 'merge') {
       ['categories', data.categories, (c) => strip(c)],
       ['products', data.products, (p) => strip(p)],
       ['movements', data.movements || [], (m) => strip(m)],
-      ['images', data.images || [], (img) => ({ data: img.data })],
+      /*
+       * Halki file (bina tasveeron wali) tasveerein mitati nahi.
+       *
+       * "Replace" ka matlab hai file ke mutabik sab kuch — magar file me
+       * tasveerein hain hi nahi, is liye us ke mutabik chalne ka matlab hoga
+       * dukan ki saari tasveerein uda dena. Ye wo nuqsaan hai jo dukandar ne
+       * maanga hi nahi tha. Ids replace me wahi rehti hain, is liye chhori hui
+       * tasveerein apne products se juri bhi rehti hain.
+       */
+      ...(data.imagesSkipped
+        ? []
+        : [['images', data.images || [], (img) => ({ data: img.data })]]),
       ['khataCategories', data.khataCategories || [], (c) => strip(c)],
       ['khataParties', data.khataParties || [], (p) => strip(p)],
       ['khataEntries', data.khataEntries || [], (e) => strip(e)],

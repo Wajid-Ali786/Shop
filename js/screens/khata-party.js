@@ -14,6 +14,8 @@ import {
   khataField,
   khataCash,
   creditRoom,
+  settleableAmount,
+  settleFromDeposit,
   productById,
 } from '../store.js'
 import { appBar, field, icon, empty, loading } from '../components.js'
@@ -76,6 +78,7 @@ export function renderKhataParty(root, partyId, rerender) {
     const cats = (party.categoryIds || [])
       .map((id) => khataCategoryById(id))
       .filter(Boolean)
+    const settleable = settleableAmount(party)
 
     root.innerHTML = `
       <div class="screen">
@@ -142,6 +145,20 @@ export function renderKhataParty(root, partyId, rerender) {
               .join('')}
           </div>
 
+          <!--
+            Jama aur udhaar dono chal rahe hon to inhein aamne saamne karne ka
+            ek button. Sirf usi soorat me dikhta hai jab waqai kuch chukaya ja
+            sakta ho — warna ye jagah gher kar khara rehta aur kuch karta bhi
+            nahi.
+          -->
+          ${
+            settleable
+              ? `<button class="btn btn--secondary btn--full" data-settle style="margin-top:12px">
+                   ⚖️ ${esc(t('khata.settleFromDeposit', { amount: formatMoney(settleable, currency) }))}
+                 </button>`
+              : ''
+          }
+
           ${party.phone ? whatsappButton(party, balance, currency) : ''}
 
           <p class="formhead" style="margin:20px 0 10px">${esc(t('khata.history'))}</p>
@@ -166,6 +183,34 @@ export function renderKhataParty(root, partyId, rerender) {
     draw()
   })
   on(root, 'click', '[data-entry]', (_e, el) => openEntrySheet(partyId, el.dataset.entry))
+
+  on(root, 'click', '[data-settle]', async (_e, el) => {
+    const current = khataPartyById(partyId)
+    const amount = settleableAmount(current)
+    if (!amount) return
+
+    // Do entries banti hain aur hisaab do jagah badalta hai — is se pehle ek
+    // dafa poochh lena banta hai.
+    const ok = await confirmModal({
+      title: t('khata.settleTitle'),
+      message: t('khata.settleConfirm', {
+        amount: formatMoney(amount, state.settings.currency),
+        name: current.name,
+      }),
+      confirmLabel: t('khata.settleDo'),
+    })
+    if (!ok) return
+
+    el.disabled = true
+    try {
+      await settleFromDeposit(partyId)
+      toast(t('khata.settleDone'))
+    } catch {
+      toast(t('error.generic'))
+    } finally {
+      el.disabled = false
+    }
+  })
 
   // Screen chhorte waqt listener band — warna khate jama hote rehte hain.
   return () => {

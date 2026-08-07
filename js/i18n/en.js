@@ -230,6 +230,12 @@ export const en = {
   'khata.depositAfter': 'Deposit after',
   'khata.hasDeposit': 'Keeps money with me',
   'khata.hasDepositHint': 'Turn on for people who leave cash with you and draw it down',
+  'khata.settleFromDeposit': 'Settle {amount} from their deposit',
+  'khata.settleTitle': 'Settle from deposit',
+  'khata.settleConfirm':
+    'Take {amount} out of what {name} left with you and clear that much of their udhaar. Both are written down.',
+  'khata.settleDo': 'Settle',
+  'khata.settleDone': 'Settled from the deposit',
 
   'khata.jamaShort': 'deposit',
 
@@ -448,6 +454,13 @@ export const en = {
   'settings.exportDesc':
     'Saves all products and stock into one file on this phone. Your data is already safe in Firebase — this is just an extra copy.',
   'settings.exported': 'File saved',
+  'settings.backupBigMessage':
+    'With {photos} photos this file will be about {size}. That is hard to send on WhatsApp.',
+  'settings.backupWithPhotos': 'Everything, photos too ({size})',
+  'settings.backupWithPhotosDesc': 'The full copy. Nothing is left out.',
+  'settings.backupNoPhotos': 'Skip the photos (small file)',
+  'settings.backupNoPhotosDesc':
+    'Prices, stock, history and udhaar khata all come. Photos can be taken again.',
   'settings.restore': 'Restore from a file',
   'settings.restoreDesc':
     'Loads a backup file back into your shop. Photos and stock history come back too.',
