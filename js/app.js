@@ -148,7 +148,21 @@ if (!isConfigured()) {
    * shuru karne se cache aur server phir mil jate hain.
    */
   enablePullRefresh(async () => {
-    if (signedIn) startSync()
+    /*
+     * Sirf tab dobara jurte hain jab waqai kuch toota ho.
+     *
+     * Pehle har kheench par `startSync()` chalta tha — aur wo `stopSync()` se
+     * shuru hota hai, jo `state.products` samet sab kuch khali kar deta hai
+     * aur `ready` bhi false. Nateeja: poori dukan ek lamhe ke liye ghayab, aur
+     * saara data dobara download. Ek 2000 product wali dukan me ye har kheench
+     * par hazaron reads kha jata tha — aur Firestore ki free hadd wahin kharch
+     * hoti thi.
+     *
+     * Listeners waise bhi live hain: jo screen par hai wo pehle se taza hai.
+     * Dobara jurna sirf us soorat me kaam ka hai jab connection toot chuka ho
+     * ya rules ne rok diya ho.
+     */
+    if (signedIn && (state.error || !state.ready)) startSync()
     await new Promise((r) => setTimeout(r, 600))
     render()
   })

@@ -231,6 +231,22 @@ export const ur = {
   'khata.hasDeposit': 'میرے پاس پیسہ رکھتا ہے',
   'khata.hasDepositHint': 'اُن لوگوں کے لیے چالو کریں جو پیسہ رکھ کر تھوڑا تھوڑا لیتے ہیں',
 
+  'khata.jamaShort': 'جمع',
+
+  'settings.historyKeep': 'اسٹاک ہسٹری کتنے دن رکھیں',
+  'settings.historyKeepDays': '{days} دن',
+  'settings.historyKeepAll': 'سب کچھ رکھیں',
+  'settings.historyKeepHint':
+    'پرانی انٹریاں ڈیلیٹ کی جا سکتی ہیں تاکہ ایپ ہلکی رہے۔ آپ کا اسٹاک بالکل نہیں بدلتا — صرف پرانا ریکارڈ جاتا ہے۔',
+  'settings.historyClean': 'پرانی ہسٹری ڈیلیٹ کریں',
+  'settings.historyNone': 'ابھی صاف کرنے کو کچھ نہیں۔',
+  'settings.historyConfirm':
+    '{count} پرانی اسٹاک انٹریاں ڈیلیٹ کریں؟ آپ کے اسٹاک کی گنتی پر کوئی اثر نہیں — صرف پرانا ریکارڈ جائے گا۔',
+  'settings.historyDone': '{count} پرانی انٹریاں ڈیلیٹ ہو گئیں',
+  'home.historyTitle': 'اسٹاک ہسٹری جمع ہو رہی ہے',
+  'home.historyBody': 'پرانی انٹریاں جا سکتی ہیں۔ آپ کا اسٹاک جیسا ہے ویسا ہی رہے گا۔',
+  'home.historyLater': 'ابھی نہیں',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',

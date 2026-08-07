@@ -19,13 +19,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // shops/{uid} aur us ke andar ka sab kuch (products, categories, movements)
+    // -----------------------------------------------------------------
+    //  shops/{uid} — dukandar ka apna sab kuch.
+    //
+    //  Pehle yahan sirf ek `match /{document=**}` tha jo maalik ko har cheez
+    //  likhne deta tha. Ijazat to theek hai, magar JAANCH koi nahi thi: app me
+    //  bug ho, ya koi seedha Firestore par likhe, to manfi stock ya harf wali
+    //  qeemat bhi qubool ho jati thi — aur wo kharabi hamesha ke liye data me
+    //  baith jati.
+    //
+    //  Ab har collection ka apna qanoon hai. Wildcard jaan boojh kar HATA diya
+    //  gaya hai: Firestore me agar koi bhi match ijazat de de to kaam ho jata
+    //  hai, yaani ek khula wildcard neeche ki saari jaanch bay-kaar kar deta.
+    //  Is ka matlab ye bhi hai ke nayi collection banate waqt yahan qanoon
+    //  likhna parega — aur bhoolne par likhai FORAN rukegi, chup chaap ghalat
+    //  data nahi banega.
+    // -----------------------------------------------------------------
     match /shops/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+      function owner() {
+        return request.auth != null && request.auth.uid == uid;
       }
+
+      // Khali chhora ja sakta hai, magar likha ho to adad ho aur manfi na ho.
+      function amountOk(data, f) {
+        return !(f in data) || data[f] == null
+          || (data[f] is number && data[f] >= 0);
+      }
+
+      // Shop ka apna document (settings).
+      allow read, write: if owner();
+
+      match /products/{id} {
+        allow read, delete: if owner();
+        allow create, update: if owner()
+          && request.resource.data.nameEn is string
+          && amountOk(request.resource.data, 'stockQty')
+          && amountOk(request.resource.data, 'salePrice')
+          && amountOk(request.resource.data, 'costPrice')
+          && amountOk(request.resource.data, 'lowStockAt');
+      }
+
+      match /movements/{id} {
+        allow read, delete: if owner();
+        allow create, update: if owner()
+          && amountOk(request.resource.data, 'qty');
+      }
+
+      match /khataParties/{id} {
+        allow read, delete: if owner();
+        // Balance manfi ho sakta hai (dukandar ne dena ho), is liye sirf itna
+        // ke wo adad ho — nishan par pabandi ghalat hogi.
+        allow create, update: if owner()
+          && request.resource.data.name is string
+          && (!('balance' in request.resource.data)
+              || request.resource.data.balance is number)
+          && (!('deposit' in request.resource.data)
+              || request.resource.data.deposit is number);
+      }
+
+      match /khataEntries/{id} {
+        allow read, delete: if owner();
+        allow create, update: if owner()
+          && amountOk(request.resource.data, 'amount');
+      }
+
+      // In par koi khaas jaanch nahi banti — sirf maalik ki shart.
+      match /categories/{id} { allow read, write: if owner(); }
+      match /khataCategories/{id} { allow read, write: if owner(); }
+      match /images/{id} { allow read, write: if owner(); }
+      match /sales/{id} { allow read, write: if owner(); }
     }
 
     // ---------------------------------------------------------------

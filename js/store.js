@@ -12,7 +12,6 @@
 import {
   collection,
   doc,
-  addDoc,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -27,6 +26,7 @@ import {
   writeBatch,
   runTransaction,
   serverTimestamp,
+  Timestamp,
 } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js'
 
 import { dbf, currentUid } from './firebase.js'
@@ -57,6 +57,10 @@ export function defaultSettings() {
     lastBackupAt: null,
     // Yaad-dihani kitne din baad. 0 = band.
     backupReminderDays: 14,
+    // Stock history kitne din rakhni hai. 0 = hamesha.
+    historyKeepDays: 180,
+    // Aakhri dafa kab saaf ki (ya yaad dilai) — millis.
+    lastHistoryCleanupAt: null,
     // Grahak wala catalog (bina login ke dikhne wali list) chalu hai ya nahi.
     publicCatalog: false,
   }
@@ -132,6 +136,37 @@ async function commitInChunks(ops) {
     for (const apply of ops.slice(i, i + BATCH_LIMIT)) apply(batch)
     await batch.commit()
   }
+}
+
+/**
+ * Wahi kaam, magar offline atakta nahi.
+ *
+ * Firestore offline hone par `commit()` ka wada internet aane tak poora nahi
+ * karta — likhai local cache me FORAN ho jati hai, sirf server ki tasdeeq baqi
+ * rehti hai. Jo jagah us wade ka intezar karti hai wahan button hamesha ke
+ * liye ghoomta reh jata hai aur dukandar ko lagta hai kuch save hi nahi hua.
+ *
+ * Is liye offline me intezar nahi karte. Data phir bhi mehfooz hai: cache me
+ * likha ja chuka hai aur Firestore internet aate hi khud bhej deta hai.
+ */
+async function commitSoon(ops) {
+  if (navigator.onLine) return commitInChunks(ops)
+  commitInChunks(ops).catch(() => {})
+}
+
+/**
+ * Ek likhai, usi usool par.
+ *
+ * `updateDoc`/`deleteDoc` ka wada bhi offline poora nahi hota. Jo jagah us ka
+ * intezar karti hai wahan sheet band hi nahi hoti aur "Save" ghoomta reh jata
+ * hai — halankay likhai local cache me ho chuki hoti hai aur screen par nazar
+ * bhi aa rahi hoti hai. Ye TAB ahem hai jab dukandar ka internet aata jata ho,
+ * jo asal dukan me aam baat hai.
+ */
+function writeSoon(promise) {
+  if (navigator.onLine) return promise
+  promise.catch(() => {})
+  return Promise.resolve()
 }
 
 
@@ -346,12 +381,15 @@ export async function createCategory(data) {
   if (findCategoryByName(data)) throw duplicateError()
 
   const sortOrder = (state.categories.length + 1) * 10
-  const ref = await addDoc(col('categories'), {
-    nameEn: data.nameEn.trim(),
-    nameUr: data.nameUr?.trim() || null,
-    icon: data.icon ?? '📦',
-    sortOrder,
-  })
+  const ref = doc(col('categories'))
+  await writeSoon(
+    setDoc(ref, {
+      nameEn: data.nameEn.trim(),
+      nameUr: data.nameUr?.trim() || null,
+      icon: data.icon ?? '📦',
+      sortOrder,
+    }),
+  )
   await syncPublicCategories()
   // Product form ko id chahiye hoti hai taake nayi category foran lag jaye.
   return ref.id
@@ -465,7 +503,7 @@ async function applyCategoryMerge(remap) {
 export async function updateCategory(id, changes) {
   if ((changes.nameEn || changes.nameUr) && findCategoryByName(changes, id)) throw duplicateError()
 
-  await updateDoc(doc(col('categories'), id), changes)
+  await writeSoon(updateDoc(doc(col('categories'), id), changes))
   // Category ka naam products ke searchBlob ka hissa hai — lekin sirf usi
   // category ke products ka.
   await rebuildSearchBlobs(id)
@@ -519,18 +557,21 @@ export async function createProduct(input) {
     updatedAt: serverTimestamp(),
   }
 
-  const ref = await addDoc(col('products'), payload)
+  const ref = doc(col('products'))
+  await writeSoon(setDoc(ref, payload))
 
   // Opening stock bhi history me aana chahiye, warna hisaab poora nahi hota.
   if (stockQty !== 0) {
-    await addDoc(col('movements'), {
-      productId: ref.id,
-      type: 'in',
-      qty: Math.abs(stockQty),
-      reason: 'initial',
-      balanceAfter: stockQty,
-      createdAt: serverTimestamp(),
-    })
+    await writeSoon(
+      setDoc(doc(col('movements')), {
+        productId: ref.id,
+        type: 'in',
+        qty: Math.abs(stockQty),
+        reason: 'initial',
+        balanceAfter: stockQty,
+        createdAt: serverTimestamp(),
+      }),
+    )
   }
 
   // Grahak wali list bhi taza — catalog band ho to ye kuch nahi karta.
@@ -547,11 +588,13 @@ export async function updateProduct(id, changes) {
   if (!existing) throw new Error('Product nahi mila')
 
   const merged = { ...existing, ...changes }
-  await updateDoc(doc(col('products'), id), {
-    ...cleanUndefined(changes),
-    searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
-    updatedAt: serverTimestamp(),
-  })
+  await writeSoon(
+    updateDoc(doc(col('products'), id), {
+      ...cleanUndefined(changes),
+      searchBlob: buildSearchBlob(merged, categoryNamesFor(merged.categoryIds)),
+      updatedAt: serverTimestamp(),
+    }),
+  )
 
   await syncPublicProduct({ ...merged, id })
 }
@@ -745,7 +788,8 @@ export function watchProductMovements(productId, callback, onError) {
 const imageCache = new Map()
 
 export async function saveImage(dataUrl) {
-  const ref = await addDoc(col('images'), { data: dataUrl, createdAt: serverTimestamp() })
+  const ref = doc(col('images'))
+  await writeSoon(setDoc(ref, { data: dataUrl, createdAt: serverTimestamp() }))
   imageCache.set(ref.id, dataUrl)
   return ref.id
 }
@@ -768,7 +812,7 @@ export async function deleteImage(imageId) {
   if (!imageId) return
   imageCache.delete(imageId)
   try {
-    await deleteDoc(doc(col('images'), imageId))
+    await writeSoon(deleteDoc(doc(col('images'), imageId)))
   } catch {
     // Tasveer pehle hi ja chuki ho to koi baat nahi.
   }
@@ -778,7 +822,7 @@ export async function deleteImage(imageId) {
 
 export async function saveSetting(key, value) {
   // merge:true isliye ke shop document pehli baar bhi ban jaye.
-  await setDoc(shopRef(), { [key]: value }, { merge: true })
+  await writeSoon(setDoc(shopRef(), { [key]: value }, { merge: true }))
 }
 
 // ------------------------------------------------------------------- seed
@@ -810,11 +854,11 @@ export async function seedDefaultCategories() {
   const existing = await getDocs(col('categories'))
   if (!existing.empty) return 0
 
-  const batch = writeBatch(dbf)
-  DEFAULT_CATEGORIES.forEach((cat, i) => {
-    batch.set(doc(col('categories')), { ...cat, sortOrder: (i + 1) * 10 })
-  })
-  await batch.commit()
+  await commitSoon(
+    DEFAULT_CATEGORIES.map((cat, i) => (batch) =>
+      batch.set(doc(col('categories')), { ...cat, sortOrder: (i + 1) * 10 }),
+    ),
+  )
   return DEFAULT_CATEGORIES.length
 }
 
@@ -884,27 +928,30 @@ export function khataTotals() {
 }
 
 export async function createKhataParty(data) {
-  const ref = await addDoc(col('khataParties'), {
-    name: (data.name || '').trim(),
-    phone: data.phone?.trim() || null,
-    note: data.note?.trim() || null,
-    categoryIds: data.categoryIds || [],
-    // Naya khata hamesha sifar se shuru hota hai — raqam sirf entry se aati hai.
-    balance: 0,
-    deposit: 0,
-    /*
-     * Jama karane ka option har khate par nahi.
-     *
-     * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool button
-     * lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar khud
-     * chalu karta hai — us khaas grahak ke liye.
-     */
-    hasDeposit: Boolean(data.hasDeposit),
-    status: 'active',
-    lastEntryAt: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+  const ref = doc(col('khataParties'))
+  await writeSoon(
+    setDoc(ref, {
+      name: (data.name || '').trim(),
+      phone: data.phone?.trim() || null,
+      note: data.note?.trim() || null,
+      categoryIds: data.categoryIds || [],
+      // Naya khata hamesha sifar se shuru — raqam sirf entry se aati hai.
+      balance: 0,
+      deposit: 0,
+      /*
+       * Jama karane ka option har khate par nahi.
+       *
+       * Sirf kuch log paisa dukan me rakhte hain. Har khate par do fazool
+       * button lagana rozana ka kaam bhaari kar deta hai, is liye ye dukandar
+       * khud chalu karta hai — us khaas grahak ke liye.
+       */
+      hasDeposit: Boolean(data.hasDeposit),
+      status: 'active',
+      lastEntryAt: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  )
   return ref.id
 }
 
@@ -912,7 +959,9 @@ export async function updateKhataParty(id, changes) {
   // `balance` aur `deposit` yahan se kabhi nahi badalte — wo sirf entry likhne
   // par badalte hain. Warna ek edit poori history ko jhoota kar deta.
   const { balance, deposit, ...safe } = changes
-  await updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() })
+  await writeSoon(
+    updateDoc(doc(col('khataParties'), id), { ...safe, updatedAt: serverTimestamp() }),
+  )
 }
 
 /** Khata mitane par us ki poori history bhi jati hai — warna kachra reh jata. */
@@ -920,24 +969,27 @@ export async function deleteKhataParty(id) {
   const snap = await getDocs(query(col('khataEntries'), where('partyId', '==', id)))
   const ops = [(batch) => batch.delete(doc(col('khataParties'), id))]
   for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
-  await commitInChunks(ops)
+  await commitSoon(ops)
 }
 
 // ---- khata categories (products wali se bilkul alag) ----
 
 export async function createKhataCategory(data) {
-  const ref = await addDoc(col('khataCategories'), {
-    nameEn: (data.nameEn || '').trim(),
-    nameUr: data.nameUr?.trim() || null,
-    icon: data.icon || '📓',
-    sortOrder: data.sortOrder ?? (state.khataCategories.length + 1) * 10,
-    createdAt: serverTimestamp(),
-  })
+  const ref = doc(col('khataCategories'))
+  await writeSoon(
+    setDoc(ref, {
+      nameEn: (data.nameEn || '').trim(),
+      nameUr: data.nameUr?.trim() || null,
+      icon: data.icon || '📓',
+      sortOrder: data.sortOrder ?? (state.khataCategories.length + 1) * 10,
+      createdAt: serverTimestamp(),
+    }),
+  )
   return ref.id
 }
 
 export async function updateKhataCategory(id, changes) {
-  await updateDoc(doc(col('khataCategories'), id), changes)
+  await writeSoon(updateDoc(doc(col('khataCategories'), id), changes))
 }
 
 /** Category mitne par khate nahi mitte — sirf un par se ye nishan hat jata hai. */
@@ -962,11 +1014,11 @@ export async function seedKhataCategories() {
   const existing = await getDocs(col('khataCategories'))
   if (!existing.empty) return 0
 
-  const batch = writeBatch(dbf)
-  DEFAULT_KHATA_CATEGORIES.forEach((cat, i) => {
-    batch.set(doc(col('khataCategories')), { ...cat, sortOrder: (i + 1) * 10 })
-  })
-  await batch.commit()
+  await commitSoon(
+    DEFAULT_KHATA_CATEGORIES.map((cat, i) => (batch) =>
+      batch.set(doc(col('khataCategories')), { ...cat, sortOrder: (i + 1) * 10 }),
+    ),
+  )
   return DEFAULT_KHATA_CATEGORIES.length
 }
 
@@ -1053,7 +1105,7 @@ export function khataKindOf(entry) {
   return entry?.type === 'mila' ? 'milay' : 'udhaar'
 }
 
-export async function addKhataEntry({ partyId, kind, amount, items, collectedBy, note }) {
+export async function addKhataEntry({ partyId, kind, amount, items, collectedBy, note, at }) {
   const value = roundMoney(Math.abs(Number(amount) || 0))
   if (!value) throw new Error('Raqam zaroori hai')
 
@@ -1078,7 +1130,14 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
     collectedBy: collectedBy?.trim() || null,
     note: note?.trim() || null,
     balanceAfter,
-    createdAt: serverTimestamp(),
+    /*
+     * Tareekh dukandar bhi chun sakta hai.
+     *
+     * Sham ko bahi khol kar din bhar ka likhna aam baat hai. Har entry par
+     * server ka waqt daal dena us soorat me jhoot ban jata hai — aur history
+     * ki tarteeb bhi ulat deta hai, kyunki wahi tarteeb ki bunyaad hai.
+     */
+    createdAt: at ? Timestamp.fromMillis(at) : serverTimestamp(),
     ...(offline ? { offline: true } : {}),
   })
 
@@ -1172,7 +1231,7 @@ async function recalcParty(partyId) {
     }),
   )
 
-  await commitInChunks(ops)
+  await commitSoon(ops)
   return running
 }
 
@@ -1210,8 +1269,11 @@ export async function updateKhataEntry(entryId, changes) {
   }
   if (changes.collectedBy !== undefined) patch.collectedBy = changes.collectedBy?.trim() || null
   if (changes.note !== undefined) patch.note = changes.note?.trim() || null
+  // Tareekh badalne par tarteeb bhi badalti hai — is liye `recalcParty` neeche
+  // poori zanjeer dobara banata hai, sirf ye ek document nahi.
+  if (changes.at) patch.createdAt = Timestamp.fromMillis(changes.at)
 
-  await updateDoc(ref, patch)
+  await writeSoon(updateDoc(ref, patch))
   return recalcParty(partyId)
 }
 
@@ -1222,7 +1284,7 @@ export async function deleteKhataEntry(entryId) {
   if (!snap.exists()) return 0
 
   const partyId = snap.data().partyId
-  await deleteDoc(ref)
+  await writeSoon(deleteDoc(ref))
   return recalcParty(partyId)
 }
 
@@ -1240,7 +1302,7 @@ export async function deleteKhataParties(ids) {
     for (const d of snap.docs) ops.push((batch) => batch.delete(doc(col('khataEntries'), d.id)))
     ops.push((batch) => batch.delete(doc(col('khataParties'), id)))
   }
-  await commitInChunks(ops)
+  await commitSoon(ops)
   return ids.length
 }
 
@@ -1263,6 +1325,86 @@ export function watchKhataEntries(partyId, callback) {
     },
     () => callback([]),
   )
+}
+
+/**
+ * Stock history ki safai.
+ *
+ * Har chhoti tabdeeli hamesha ke liye jama hoti rehti hai: rozana 50 entries
+ * ka matlab saal me 18,000 aur do saal me 36,000. Aaj masla nahi, aage hai —
+ * aur wo sab har login par mangwai bhi jati hain.
+ *
+ * Purani entries mitane se stock ka maujooda hisaab BILKUL nahi badalta:
+ * `stockQty` product par likha hota hai, history se ginti nahi hoti. Sirf
+ * "kab kya hua" ka purana record jata hai.
+ */
+export const HISTORY_KEEP_CHOICES = [90, 180, 365, 0]
+
+/** Kitne din baad yaad dilana hai. */
+const HISTORY_REMIND_DAYS = 10
+
+export function historyKeepDays(settings = state.settings) {
+  const days = Number(settings?.historyKeepDays)
+  return Number.isFinite(days) && days >= 0 ? days : 180
+}
+
+function historyCutoff(settings = state.settings) {
+  const days = historyKeepDays(settings)
+  if (!days) return null
+  return Date.now() - days * 24 * 60 * 60 * 1000
+}
+
+/**
+ * Safai ki yaad dilani chahiye?
+ *
+ * Server se ginti mangwana yahan fazool hoga — har dashboard par ek query.
+ * `state.movements` waise bhi aakhri 100 rakhti hai; agar un me se sab se
+ * purani bhi hadd se bahar hai to us se aage yaqeenan aur bhi hai. Ye jawab
+ * muft me mil jata hai.
+ */
+export function historyCleanupDue() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return false
+
+  const rows = state.movements
+  // Sau se kam hain to itni purani cheez ho hi nahi sakti jo pareshan kare.
+  if (rows.length < 100) return false
+
+  const oldest = rows[rows.length - 1]
+  if (!oldest?.createdAt || oldest.createdAt >= cutoff) return false
+
+  const last = state.settings.lastHistoryCleanupAt
+  if (!last) return true
+  return Date.now() - last > HISTORY_REMIND_DAYS * 24 * 60 * 60 * 1000
+}
+
+/** Kitni entries hadd se bahar hain — mitane se pehle dikhane ke liye. */
+export async function countOldMovements() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return 0
+  const snap = await getDocs(
+    query(col('movements'), where('createdAt', '<', Timestamp.fromMillis(cutoff))),
+  )
+  return snap.size
+}
+
+/** Purani entries mitao. Stock ki maujooda ginti par koi asar nahi hota. */
+export async function pruneOldMovements() {
+  const cutoff = historyCutoff()
+  if (!cutoff) return 0
+
+  const snap = await getDocs(
+    query(col('movements'), where('createdAt', '<', Timestamp.fromMillis(cutoff))),
+  )
+  const ops = snap.docs.map((d) => (batch) => batch.delete(doc(col('movements'), d.id)))
+  await commitSoon(ops)
+  await saveSetting('lastHistoryCleanupAt', Date.now())
+  return snap.size
+}
+
+/** "Abhi nahi" — agle das din tak dobara na poochein. */
+export async function snoozeHistoryCleanup() {
+  await saveSetting('lastHistoryCleanupAt', Date.now())
 }
 
 // ---------------------------------------------------------- public catalog
