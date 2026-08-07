@@ -1210,14 +1210,12 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
  * Raqam wohi jitni dono me se kam hai: na jama manfi ho sakta hai, na udhaar
  * apni hadd se zyada chukaya ja sakta hai.
  */
-export async function settleFromDeposit(partyId, at = null) {
+export async function settleFromDeposit(partyId, { at = null, note = '' } = {}) {
   const party = khataPartyById(partyId)
   if (!party) throw new Error('Khata nahi mila')
 
   const amount = settleableAmount(party)
   if (!amount) throw new Error('Chukane ke liye kuch nahi hai')
-
-  const note = 'Jama se chukaya'
 
   /*
    * Tarteeb jaan boojh kar: pehle jama se nikalo, phir udhaar me daalo.

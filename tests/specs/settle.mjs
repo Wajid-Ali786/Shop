@@ -92,6 +92,21 @@ check(
 
 check('Nothing is left to settle now', (await page.locator('[data-settle]').count()) === 0)
 
+// Jo note history me likha jata hai wo app ki apni zaban ka ho — store ki
+// nahi. Angrezi UI me Roman Urdu ka note dukandar ke liye ajnabi hai.
+const note = await readStore(async () => {
+  const m = await import('/js/store.js')
+  const p = m.state.khataParties.find((x) => x.name === 'Settle Test')
+  const rows = await new Promise((done) => {
+    const stop = m.watchKhataEntries(p.id, (r) => {
+      stop()
+      done(r)
+    })
+  })
+  return rows[0]?.note
+})
+check('The note it writes follows the app language', note === 'Settled from deposit', `"${note}"`)
+
 // Jama kam ho to sirf utna hi chukta hai jitna mojood hai.
 await page.locator('[data-entry="udhaar"]').click()
 await page.waitForTimeout(700)

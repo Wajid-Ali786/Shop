@@ -54,6 +54,28 @@ check(
 )
 check('And it says by how much', (await text()).includes('200'))
 
+/*
+ * Tanbeeh raqam ke saath honi chahiye, sheet ke aakhir me nahi.
+ *
+ * Pehle wo save button ke oopar thi — yaani raqam likhte waqt parde se bahar,
+ * aur dukandar ko sirf tab nazar aati jab wo neeche tak scroll karta. Jo
+ * tanbeeh dikhti hi na ho wo tanbeeh nahi.
+ */
+const order = await page.evaluate(() => {
+  const box = document.querySelector('#ke-limit')
+  const amount = document.querySelector('#ke-amount')
+  const note = document.querySelector('#ke-note')
+  if (!box || !amount || !note) return null
+  return {
+    afterAmount: box.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_PRECEDING,
+    beforeNote: box.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+  }
+})
+check(
+  'The warning sits right under the amount, not at the far bottom',
+  Boolean(order?.afterAmount && order?.beforeNote),
+)
+
 // Save par ek dafa poochta hai — aur "phir bhi dein" chalta hai.
 await page.locator('#ke-save').click()
 await page.waitForTimeout(1200)

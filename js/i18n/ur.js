@@ -230,12 +230,13 @@ export const ur = {
   'khata.depositAfter': 'اس کے بعد جمع',
   'khata.hasDeposit': 'میرے پاس پیسہ رکھتا ہے',
   'khata.hasDepositHint': 'اُن لوگوں کے لیے چالو کریں جو پیسہ رکھ کر تھوڑا تھوڑا لیتے ہیں',
-  'khata.settleFromDeposit': 'جمع میں سے {amount} کاٹ دیں',
+  'khata.settleFromDeposit': 'جمع میں سے {amount} کاٹیں',
   'khata.settleTitle': 'جمع سے چکائیں',
   'khata.settleConfirm':
     '{name} نے جو پیسہ آپ کے پاس رکھا ہے اُس میں سے {amount} نکال کر اتنا اُدھار ختم کر دیا جائے گا۔ دونوں باتیں کھاتے میں لکھی جائیں گی۔',
   'khata.settleDo': 'چکائیں',
   'khata.settleDone': 'جمع میں سے چکا دیا گیا',
+  'khata.settleNote': 'جمع میں سے چکایا',
 
   'khata.jamaShort': 'جمع',
 

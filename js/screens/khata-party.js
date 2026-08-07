@@ -203,7 +203,9 @@ export function renderKhataParty(root, partyId, rerender) {
 
     el.disabled = true
     try {
-      await settleFromDeposit(partyId)
+      // Note screen se aata hai, store se nahi — store zaban nahi jaanta, aur
+      // history me likhi hui baat wohi honi chahiye jo dukandar ne parhi thi.
+      await settleFromDeposit(partyId, { note: t('khata.settleNote') })
       toast(t('khata.settleDone'))
     } catch {
       toast(t('error.generic'))
@@ -474,6 +476,14 @@ function openEntrySheet(partyId, kind, existing = null) {
       { required: true },
     )}
 
+    <!--
+      Hadd ki tanbeeh raqam ke bilkul neeche.
+      Pehle ye sheet ke aakhir me thi — save button ke saath — jahan raqam
+      likhte waqt nazar jati hi nahi. Tanbeeh wahin kaam ki hai jahan aankh
+      pehle se hai.
+    -->
+    <div id="ke-limit"></div>
+
     <div id="ke-itembox">
       <p class="formhead" style="margin:4px 0 8px">${esc(t('khata.items'))}</p>
       <div id="ke-chosen"></div>
@@ -506,7 +516,6 @@ function openEntrySheet(partyId, kind, existing = null) {
       )}">`,
     )}
 
-    <div id="ke-limit"></div>
     <div id="ke-error"></div>
     <button class="btn btn--primary btn--full" id="ke-save">${esc(t('common.save'))}</button>`)
 

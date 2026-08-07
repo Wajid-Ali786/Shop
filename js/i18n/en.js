@@ -230,12 +230,13 @@ export const en = {
   'khata.depositAfter': 'Deposit after',
   'khata.hasDeposit': 'Keeps money with me',
   'khata.hasDepositHint': 'Turn on for people who leave cash with you and draw it down',
-  'khata.settleFromDeposit': 'Settle {amount} from their deposit',
+  'khata.settleFromDeposit': 'Settle {amount} from deposit',
   'khata.settleTitle': 'Settle from deposit',
   'khata.settleConfirm':
     'Take {amount} out of what {name} left with you and clear that much of their udhaar. Both are written down.',
   'khata.settleDo': 'Settle',
   'khata.settleDone': 'Settled from the deposit',
+  'khata.settleNote': 'Settled from deposit',
 
   'khata.jamaShort': 'deposit',
 

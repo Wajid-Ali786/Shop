@@ -65,9 +65,15 @@ export function renderKhata(root, rerender) {
       <div class="pad" style="padding-bottom:8px">
         <div class="card khatatotal">
           <p class="tiny muted">${esc(t('khata.totalOut'))}</p>
-          <p class="khatatotal__value khatatotal__value--owed" dir="ltr">${esc(
-            formatMoney(totals.total, state.settings.currency),
-          )}</p>
+          <!--
+            Sifar laal nahi hota. Laal ka matlab hai "dhyan do" — aur jab
+            dukan ka koi paisa bahar nahi, to dhyan dene ki koi baat hi nahi.
+            Bara laal sifar sab se upar khara ho to nazar ko bay-wajah dhoka
+            deta hai.
+          -->
+          <p class="khatatotal__value${
+            totals.total > 0 ? ' khatatotal__value--owed' : ''
+          }" dir="ltr">${esc(formatMoney(totals.total, state.settings.currency))}</p>
           <p class="small muted">${esc(t('khata.fromPeople', { count: totals.people }))}</p>
           ${
             totals.deposit > 0
