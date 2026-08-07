@@ -946,6 +946,15 @@ export async function createKhataParty(data) {
        * khud chalu karta hai — us khaas grahak ke liye.
        */
       hasDeposit: Boolean(data.hasDeposit),
+      /*
+       * Udhaar ki hadd — is grahak ka "credit score".
+       *
+       * `null` ka matlab koi hadd nahi. Ye rokti nahi, batati hai: aakhri
+       * faisla dukandar ka hai, kyunki wo grahak ko jaanta hai aur app nahi.
+       * Rokna aisi soorat me ulta nuqsaan deta — dukandar app chhor kar
+       * kaghaz par likhne lagta.
+       */
+      creditLimit: data.creditLimit ?? null,
       status: 'active',
       lastEntryAt: null,
       createdAt: serverTimestamp(),
@@ -1183,6 +1192,28 @@ export async function addKhataEntry({ partyId, kind, amount, items, collectedBy,
   batch.commit().catch(() => {})
 
   return balanceAfter
+}
+
+/**
+ * Udhaar ki hadd ka hisaab.
+ *
+ * `null` = koi hadd nahi. Warna batata hai ke abhi kitni gunjaish baqi hai,
+ * aur ye nayi raqam hadd se bahar to nahi ja rahi.
+ */
+export function creditRoom(party, adding = 0) {
+  const limit = Number(party?.creditLimit)
+  if (!Number.isFinite(limit) || limit <= 0) return null
+
+  const now = Number(party.balance || 0)
+  const after = roundMoney(now + Number(adding || 0))
+  return {
+    limit,
+    balance: now,
+    after,
+    left: roundMoney(limit - now),
+    over: roundMoney(Math.max(0, after - limit)),
+    exceeds: after > limit,
+  }
 }
 
 /**

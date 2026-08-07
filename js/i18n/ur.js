@@ -247,6 +247,17 @@ export const ur = {
   'home.historyBody': 'پرانی انٹریاں جا سکتی ہیں۔ آپ کا اسٹاک جیسا ہے ویسا ہی رہے گا۔',
   'home.historyLater': 'ابھی نہیں',
 
+  'khata.creditLimit': 'ادھار کی حد',
+  'khata.creditLimitNone': 'کوئی حد نہیں',
+  'khata.creditLimitHint': 'یہ شخص زیادہ سے زیادہ کتنا ادھار لے سکتا ہے۔ حد نہ ہو تو خالی چھوڑ دیں۔',
+  'khata.limitLeft': '{limit} میں سے {left} باقی',
+  'khata.overLimitBy': '{limit} کی حد سے {amount} زیادہ',
+  'khata.overLimit': 'حد سے زیادہ',
+  'khata.limitWarnTitle': 'ادھار کی حد سے آگے',
+  'khata.limitWarnBody': 'اِن کی حد {limit} ہے۔ اس سے {after} ہو جائے گا — {over} زیادہ۔',
+  'khata.limitConfirm': 'اِن کی حد {limit} ہے اور اس سے {after} ہو جائے گا۔ پھر بھی دیں؟',
+  'khata.limitGoAhead': 'پھر بھی دیں',
+
   // products
   'products.title': 'پروڈکٹس',
   'products.searchPlaceholder': 'نام، برانڈ یا ٹیگ سے تلاش کریں…',

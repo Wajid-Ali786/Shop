@@ -2399,3 +2399,12 @@ input[type='checkbox'] {
 .balcards .khatatotal__value {
   font-size: 1.35rem;
 }
+
+/* Hadd se bahar ja chuka khata — list me foran nazar aana chahiye. */
+.limitflag {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--danger);
+}

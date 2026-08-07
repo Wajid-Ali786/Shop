@@ -50,8 +50,9 @@ export function renderKhataForm(root, partyId, rerender) {
             note: existing.note || '',
             categoryIds: [...(existing.categoryIds || [])],
             hasDeposit: Boolean(existing.hasDeposit),
+            creditLimit: existing.creditLimit ?? '',
           }
-        : { name: '', phone: '', note: '', categoryIds: [], hasDeposit: false },
+        : { name: '', phone: '', note: '', categoryIds: [], hasDeposit: false, creditLimit: '' },
       saving: false,
     }
   }
@@ -63,6 +64,8 @@ export function renderKhataForm(root, partyId, rerender) {
     const name = $('#kf-name', root)
     const phone = $('#kf-phone', root)
     const note = $('#kf-note', root)
+    const limit = $('#kf-limit', root)
+    if (limit) form.creditLimit = limit.value
     if (name) form.name = name.value
     if (phone) form.phone = phone.value
     if (note) form.note = note.value
@@ -97,6 +100,16 @@ export function renderKhataForm(root, partyId, rerender) {
               `<input id="kf-phone" type="tel" inputmode="tel" dir="ltr"
                  value="${escAttr(form.phone)}" placeholder="03xx xxxxxxx">`,
               { hint: t('khata.phoneHint') },
+            )}
+            <!--
+              Udhaar ki hadd — is grahak ka "credit score". Khali chhorne ka
+              matlab koi hadd nahi.
+            -->
+            ${field(
+              t('khata.creditLimit'),
+              `<input id="kf-limit" type="number" inputmode="decimal" min="0" step="1" dir="ltr"
+                 value="${escAttr(form.creditLimit)}" placeholder="${escAttr(t('khata.creditLimitNone'))}">`,
+              { hint: t('khata.creditLimitHint') },
             )}
           </div>
 
@@ -244,8 +257,12 @@ export function renderKhataForm(root, partyId, rerender) {
     draw()
 
     try {
-      if (isEdit) await updateKhataParty(partyId, { ...form })
-      else await createKhataParty(form)
+      // Khali khana = koi hadd nahi.
+      const limit = String(form.creditLimit).trim()
+      const payload = { ...form, creditLimit: limit ? Number(limit) : null }
+
+      if (isEdit) await updateKhataParty(partyId, payload)
+      else await createKhataParty(payload)
       clearKhataDraft()
       goBack()
     } catch (err) {

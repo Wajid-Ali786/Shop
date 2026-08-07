@@ -74,7 +74,8 @@ service cloud.firestore {
           && (!('balance' in request.resource.data)
               || request.resource.data.balance is number)
           && (!('deposit' in request.resource.data)
-              || request.resource.data.deposit is number);
+              || request.resource.data.deposit is number)
+          && amountOk(request.resource.data, 'creditLimit');
       }
 
       match /khataEntries/{id} {

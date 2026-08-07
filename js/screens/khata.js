@@ -1,7 +1,13 @@
 import { esc, escAttr, on, toast } from '../lib/dom.js'
 import { t, localizedName } from '../i18n/index.js'
 import { navigate } from '../lib/router.js'
-import { state, khataTotals, khataCategoryById, deleteKhataParties } from '../store.js'
+import {
+  state,
+  khataTotals,
+  khataCategoryById,
+  deleteKhataParties,
+  creditRoom,
+} from '../store.js'
 import { icon, empty, loading } from '../components.js'
 import { formatMoney } from '../lib/format.js'
 import { wireDragScroll } from '../lib/dragscroll.js'
@@ -274,6 +280,12 @@ function partyRow(party) {
             ${cat ? `${esc(cat.icon || '📓')} ${esc(localizedName(cat))}` : ''}
             ${party.phone ? `<span dir="ltr">${esc(party.phone)}</span>` : ''}
           </span>
+          <!-- Hadd se bahar ja chuka khata rozana ki list me nazar aana chahiye. -->
+          ${
+            creditRoom(party)?.left < 0
+              ? `<span class="limitflag">⚠️ ${esc(t('khata.overLimit'))}</span>`
+              : ''
+          }
         </span>
       </button>
       <div class="pcard__side">

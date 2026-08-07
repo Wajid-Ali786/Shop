@@ -13,6 +13,7 @@ import {
   khataKindOf,
   khataField,
   khataCash,
+  creditRoom,
   productById,
 } from '../store.js'
 import { appBar, field, icon, empty, loading } from '../components.js'
@@ -113,7 +114,7 @@ export function renderKhataParty(root, partyId, rerender) {
           </div>
 
           ${
-            cats.length || party.phone || party.note
+            cats.length || party.phone || party.note || creditRoom(party)
               ? `<div class="card" style="margin-bottom:14px;text-align:center">
                    ${
                      cats.length
@@ -124,6 +125,7 @@ export function renderKhataParty(root, partyId, rerender) {
                    }
                    ${party.phone ? `<p class="small muted" dir="ltr">${esc(party.phone)}</p>` : ''}
                    ${party.note ? `<p class="small muted" dir="auto">${esc(party.note)}</p>` : ''}
+                   ${limitLine(party, currency)}
                  </div>`
               : ''
           }
@@ -173,6 +175,32 @@ export function renderKhataParty(root, partyId, rerender) {
     resetAutoLoad()
   }
 }
+
+/**
+ * Udhaar ki hadd — kitni gunjaish baqi hai.
+ *
+ * Hadd na ho to kuch nahi likha jata. Hadd se bahar ja chuke hon to laal,
+ * warna sirf itna ke aur kitna diya ja sakta hai.
+ */
+function limitLine(party, currency) {
+  const room = creditRoom(party)
+  if (!room) return ''
+
+  return room.left < 0
+    ? `<p class="small" style="color:var(--danger);font-weight:700">${esc(
+        t('khata.overLimitBy', {
+          amount: formatMoney(Math.abs(room.left), currency),
+          limit: formatMoney(room.limit, currency),
+        }),
+      )}</p>`
+    : `<p class="small muted">${esc(
+        t('khata.limitLeft', {
+          left: formatMoney(room.left, currency),
+          limit: formatMoney(room.limit, currency),
+        }),
+      )}</p>`
+}
+
 
 /**
  * WhatsApp par khata bhejna.
@@ -433,6 +461,7 @@ function openEntrySheet(partyId, kind, existing = null) {
       )}">`,
     )}
 
+    <div id="ke-limit"></div>
     <div id="ke-error"></div>
     <button class="btn btn--primary btn--full" id="ke-save">${esc(t('common.save'))}</button>`)
 
@@ -452,8 +481,44 @@ function openEntrySheet(partyId, kind, existing = null) {
       body.querySelectorAll('[data-kind]').forEach((b) => {
         b.classList.toggle('kindpick__btn--on', b.dataset.kind === selectedKind)
       })
+      drawLimit()
     })
   })
+
+  /*
+   * Udhaar ki hadd ki tanbeeh — likhte hi, save se pehle.
+   *
+   * Ye ROKTI nahi. Aakhri faisla dukandar ka hai: wo grahak ko jaanta hai, app
+   * nahi. Rokne se wo app chhor kar kaghaz par likhne lagta, aur phir hisaab
+   * do jagah bat jata — jo is se kahin bura hai.
+   */
+  const limitBox = $('#ke-limit', body)
+  const amountInput = $('#ke-amount', body)
+
+  function drawLimit() {
+    // Sirf udhaar dene par — pesay milne par hadd ka sawal hi nahi.
+    if (khataField(selectedKind) !== 'balance' || khataSign(selectedKind) < 0) {
+      limitBox.innerHTML = ''
+      return
+    }
+    const room = creditRoom(khataPartyById(partyId), Number(amountInput.value) || 0)
+    if (!room || !room.exceeds) {
+      limitBox.innerHTML = ''
+      return
+    }
+    limitBox.innerHTML = `<div class="card card--warn" style="margin-bottom:12px">
+      <p class="small bold">⚠️ ${esc(t('khata.limitWarnTitle'))}</p>
+      <p class="small">${esc(
+        t('khata.limitWarnBody', {
+          limit: formatMoney(room.limit, state.settings.currency),
+          after: formatMoney(room.after, state.settings.currency),
+          over: formatMoney(room.over, state.settings.currency),
+        }),
+      )}</p>
+    </div>`
+  }
+
+  amountInput.addEventListener('input', drawLimit)
 
   // ---- "kya le kar gaya" ----
   const itemInput = $('#ke-item', body)
@@ -536,6 +601,21 @@ function openEntrySheet(partyId, kind, existing = null) {
     // Khane me likha hua magar abhi tak jama na kiya gaya item bhi le lo —
     // warna dukandar ka likha hua chup chaap gum ho jata hai.
     if (itemInput.value.trim()) addItem(itemInput.value)
+
+    // Hadd se bahar ja raha ho to ek dafa poochte hain — mana nahi karte.
+    const room = creditRoom(khataPartyById(partyId), amount)
+    if (khataField(selectedKind) === 'balance' && khataSign(selectedKind) > 0 && room?.exceeds) {
+      const go = await confirmModal({
+        title: t('khata.limitWarnTitle'),
+        message: t('khata.limitConfirm', {
+          limit: formatMoney(room.limit, state.settings.currency),
+          after: formatMoney(room.after, state.settings.currency),
+        }),
+        confirmLabel: t('khata.limitGoAhead'),
+        danger: true,
+      })
+      if (!go) return
+    }
 
     save.disabled = true
     save.innerHTML = '<span class="spinner spinner--sm"></span>'

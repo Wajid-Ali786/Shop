@@ -247,6 +247,19 @@ export const en = {
   'home.historyBody': 'Old entries can go. Your stock counts stay exactly as they are.',
   'home.historyLater': 'Not now',
 
+  'khata.creditLimit': 'Credit limit',
+  'khata.creditLimitNone': 'No limit',
+  'khata.creditLimitHint': 'How much credit this person may run up. Leave empty for no limit.',
+  'khata.limitLeft': '{left} of {limit} credit left',
+  'khata.overLimitBy': 'Over the {limit} limit by {amount}',
+  'khata.overLimit': 'Over limit',
+  'khata.limitWarnTitle': 'Past their credit limit',
+  'khata.limitWarnBody':
+    'Their limit is {limit}. This takes them to {after} — {over} over.',
+  'khata.limitConfirm':
+    'Their limit is {limit} and this takes them to {after}. Give it anyway?',
+  'khata.limitGoAhead': 'Give anyway',
+
   // products
   'products.title': 'Products',
   'products.searchPlaceholder': 'Search name, brand or tag…',
